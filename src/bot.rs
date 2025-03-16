@@ -1,13 +1,14 @@
 use crate::data_types::{Order, RootMsg, SendMessage};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
+use std::fs::File;
+use std::io::BufRead;
 
 pub struct Bot {
     api_url: String,
     token: String,
     admin_chat_id: String,
-    paper: Vec<String>,
-    size: Vec<String>,
+    paper: BTreeMap<String, Vec<String>>,
     orders: HashMap<String, Order>,
 }
 
@@ -25,12 +26,7 @@ impl Bot {
             api_url: format!("{}/waInstance{}", api_url, id_instance),
             token: api_token_instance,
             admin_chat_id,
-            paper: vec![
-                "глянцевая".to_string(),
-                "матовая".to_string(),
-                "шелковая".to_string(),
-            ],
-            size: vec!["9x12".into(), "10x15".into()],
+            paper: init_paper(),
             orders: HashMap::new(),
         }
     }
@@ -173,21 +169,24 @@ impl Bot {
             "paper_requested" => {
                 let paper_type: usize = msg.parse().unwrap_or(0);
                 if paper_type > 0 && paper_type <= self.paper.len() {
-                    saved.paper = self.paper[paper_type - 1].clone();
+                    saved.paper = paper_vec(&self.paper)[paper_type - 1].clone();
                     saved.state = "size_requested".to_string();
-                    self.size_prompt()
+                    let paper = saved.paper.clone();
+                    self.size_prompt(&paper)
                 } else {
                     self.paper_prompt()
                 }
             }
             "size_requested" => {
                 let size: usize = msg.parse().unwrap_or(0);
-                if size > 0 && size <= self.size.len() {
-                    saved.size = self.size[size - 1].clone();
+                let paper = saved.paper.clone();
+                let sizes = sizes_vec(&self.paper, &paper);
+                if size > 0 && size <= sizes.len() {
+                    saved.size = sizes[size - 1].clone();
                     saved.state = "size_selected".to_string();
                     READY.to_string()
                 } else {
-                    self.size_prompt()
+                    self.size_prompt(&paper)
                 }
             }
             "size_selected" => {
@@ -213,7 +212,7 @@ impl Bot {
                 self.send_message(o.chat_id.clone(), self.paper_prompt())
                     .await;
             } else if !o.images.is_empty() && o.state.eq("size_requested") {
-                self.send_message(o.chat_id.clone(), self.size_prompt())
+                self.send_message(o.chat_id.clone(), self.size_prompt(&o.paper))
                     .await;
             } else if !o.images.is_empty() && o.state.eq("size_selected") {
                 self.send_message(o.chat_id.clone(), READY.to_string())
@@ -228,17 +227,17 @@ impl Bot {
     }
 
     fn paper_prompt(&self) -> String {
-        self.paper.iter().enumerate().fold(
+        paper_vec(&self.paper).iter().enumerate().fold(
             "Выберите тип бумаги: \n".to_string(),
             |mut output, (idx, b)| {
-                let _ = writeln!(output, "{} - {b}", idx + 1);
+                let _ = writeln!(output, "{} - {}", idx + 1, b);
                 output
             },
         )
     }
 
-    fn size_prompt(&self) -> String {
-        self.size.iter().enumerate().fold(
+    fn size_prompt(&self, paper: &str) -> String {
+        sizes_vec(&self.paper, paper).iter().enumerate().fold(
             "Выберите размер фотографий: \n".to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {b}", idx + 1);
@@ -246,4 +245,42 @@ impl Bot {
             },
         )
     }
+}
+
+fn paper_vec(p: &BTreeMap<String, Vec<String>>) -> Vec<String> {
+    p.iter().map(|p| p.0.to_string()).collect()
+}
+
+fn sizes_vec(p: &BTreeMap<String, Vec<String>>, paper: &str) -> Vec<String> {
+    let s = vec![];
+    p.get(paper)
+        .unwrap_or(&s)
+        .iter()
+        .map(|p| p.to_string())
+        .collect()
+}
+
+fn init_paper() -> BTreeMap<String, Vec<String>> {
+    let lines = std::io::BufReader::new(
+        File::open("paper.txt").expect("File paper.txt not found in working directory"),
+    )
+    .lines();
+
+    let mut data: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
+    for line in lines {
+        if let Ok(line) = line {
+            let parts = line.split(':').collect::<Vec<&str>>();
+            if parts.len() != 2 {
+                panic!("Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб");
+            }
+            let paper_name = parts[0].to_string();
+            let sizes = parts[1]
+                .split(";")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            data.insert(paper_name, sizes);
+        }
+    }
+    data
 }

@@ -9,6 +9,7 @@ pub struct Bot {
     token: String,
     admin_chat_id: String,
     paper: BTreeMap<String, Vec<String>>,
+    paper_vec: Vec<String>,
     orders: HashMap<String, Order>,
 }
 
@@ -22,11 +23,14 @@ impl Bot {
         let api_token_instance =
             std::env::var("API_TOKEN_INSTANCE").expect("API_TOKEN_INSTANCE must be set");
         let admin_chat_id = std::env::var("ADMIN_CHAT_ID").expect("ADMIN_CHAT_ID must be set");
+        let paper = init_paper();
+        let paper_vec = paper.iter().map(|p| p.0.to_string()).collect();
         Self {
             api_url: format!("{}/waInstance{}", api_url, id_instance),
             token: api_token_instance,
             admin_chat_id,
-            paper: init_paper(),
+            paper,
+            paper_vec,
             orders: HashMap::new(),
         }
     }
@@ -146,7 +150,7 @@ impl Bot {
     async fn handle_message(&mut self, message: &mut RootMsg) -> String {
         let chat_id = message.body.sender_data.chat_id.clone();
         let saved = self.orders.entry(chat_id.clone()).or_default();
-        saved.chat_id = chat_id.clone();
+        saved.chat_id = chat_id;
         saved.customer_name = message.body.sender_data.sender_name.clone();
 
         let msg = if message.body.message_data.type_message.eq("textMessage") {
@@ -168,8 +172,8 @@ impl Bot {
             }
             "paper_requested" => {
                 let paper_type: usize = msg.parse().unwrap_or(0);
-                if paper_type > 0 && paper_type <= self.paper.len() {
-                    saved.paper = paper_vec(&self.paper)[paper_type - 1].clone();
+                if paper_type > 0 && paper_type <= self.paper_vec.len() {
+                    saved.paper = self.paper_vec[paper_type - 1].clone();
                     saved.state = "size_requested".to_string();
                     let paper = saved.paper.clone();
                     self.size_prompt(&paper)
@@ -221,13 +225,12 @@ impl Bot {
         }
 
         clients_to_update.iter().for_each(|c| {
-            let order = self.orders.entry(c.clone()).or_default();
-            order.state = "paper_requested".to_string();
+            self.orders.entry(c.clone()).and_modify(|o| o.state = "paper_requested".to_string());
         });
     }
 
     fn paper_prompt(&self) -> String {
-        paper_vec(&self.paper).iter().enumerate().fold(
+        self.paper_vec.iter().enumerate().fold(
             "Выберите тип бумаги: \n".to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {}", idx + 1, b);
@@ -245,10 +248,6 @@ impl Bot {
             },
         )
     }
-}
-
-fn paper_vec(p: &BTreeMap<String, Vec<String>>) -> Vec<String> {
-    p.iter().map(|p| p.0.to_string()).collect()
 }
 
 fn sizes_vec(p: &BTreeMap<String, Vec<String>>, paper: &str) -> Vec<String> {

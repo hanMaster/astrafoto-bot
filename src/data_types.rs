@@ -126,3 +126,25 @@ impl Order {
         }
     }
 }
+
+#[derive(Debug, Serialize)]
+pub struct OrderMessage {
+    pub phone: String,
+    pub name: String,
+    pub paper_type: String,
+    pub paper_size: String,
+    pub files: Vec<String>,
+}
+
+impl From<Order> for OrderMessage {
+    fn from(order: Order) -> Self {
+        let phone = order.chat_id.split('@').collect::<Vec<&str>>()[0];
+        Self {
+            phone: phone.to_string(),
+            name: order.customer_name,
+            paper_type: order.paper,
+            paper_size: order.size,
+            files: order.images,
+        }
+    }
+}

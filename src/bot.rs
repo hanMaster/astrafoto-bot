@@ -1,4 +1,4 @@
-use crate::data_types::{Order, RootMsg, SendMessage};
+use crate::data_types::{Order, OrderMessage, RootMsg, SendMessage};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::fs::File;
@@ -7,6 +7,7 @@ use std::io::BufRead;
 pub struct Bot {
     api_url: String,
     token: String,
+    worker_url: String,
     admin_chat_id: String,
     paper: BTreeMap<String, Vec<String>>,
     paper_vec: Vec<String>,
@@ -23,11 +24,14 @@ impl Bot {
         let api_token_instance =
             std::env::var("API_TOKEN_INSTANCE").expect("API_TOKEN_INSTANCE must be set");
         let admin_chat_id = std::env::var("ADMIN_CHAT_ID").expect("ADMIN_CHAT_ID must be set");
+        let worker_url = std::env::var("WORKER_URL").expect("WORKER_URL must be set");
+
         let paper = init_paper();
         let paper_vec = paper.iter().map(|p| p.0.to_string()).collect();
         Self {
             api_url: format!("{}/waInstance{}", api_url, id_instance),
             token: api_token_instance,
+            worker_url,
             admin_chat_id,
             paper,
             paper_vec,
@@ -64,7 +68,9 @@ impl Bot {
                                     let order =
                                         self.orders.get(&m.body.sender_data.chat_id).unwrap();
                                     self.log_to_admin(format!("Заказ {}", order)).await;
-                                    self.orders.remove(&m.body.sender_data.chat_id);
+                                    let ord =
+                                        self.orders.remove(&m.body.sender_data.chat_id).unwrap();
+                                    self.send_order(ord).await;
                                 }
 
                                 println!("{:#?}", self.orders);
@@ -225,7 +231,9 @@ impl Bot {
         }
 
         clients_to_update.iter().for_each(|c| {
-            self.orders.entry(c.clone()).and_modify(|o| o.state = "paper_requested".to_string());
+            self.orders
+                .entry(c.clone())
+                .and_modify(|o| o.state = "paper_requested".to_string());
         });
     }
 
@@ -247,6 +255,25 @@ impl Bot {
                 output
             },
         )
+    }
+
+    async fn send_order(&self, order: Order) {
+        let send_result = reqwest::Client::new()
+            .post(&self.worker_url)
+            .json::<OrderMessage>(&order.into())
+            .send()
+            .await;
+        match send_result {
+            Ok(response) => {
+                println!(
+                    "Order sent successfully! Response: {}",
+                    response.text().await.unwrap()
+                );
+            }
+            Err(e) => {
+                eprintln!("Order could not be sent: {}", e);
+            }
+        }
     }
 }
 
@@ -271,7 +298,9 @@ fn init_paper() -> BTreeMap<String, Vec<String>> {
         if let Ok(line) = line {
             let parts = line.split(':').collect::<Vec<&str>>();
             if parts.len() != 2 {
-                panic!("Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб");
+                panic!(
+                    "Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб"
+                );
             }
             let paper_name = parts[0].to_string();
             let sizes = parts[1]

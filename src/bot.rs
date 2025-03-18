@@ -278,7 +278,9 @@ impl Bot {
                 );
             }
             Err(e) => {
-                eprintln!("Order could not be sent: {}", e);
+                let msg = format!("Failed to send order to worker! Error: {}", e);
+                eprintln!("{msg}");
+                self.log_to_admin(msg).await;
             }
         }
     }

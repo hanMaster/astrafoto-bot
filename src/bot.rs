@@ -15,6 +15,13 @@ pub struct Bot {
 }
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
+const ORDER_RECEIVED_MESSAGE: &str = r#"Ваш заказ принят!
+
+Получение по адресу:
+г. Владивосток,
+Партизанский пр-т, 16, Картинная галерея
+
+тел: 8-(423)-244-97-34"#;
 
 impl Bot {
     pub fn from_env() -> Self {
@@ -64,7 +71,7 @@ impl Bot {
                             } else {
                                 let msg = self.handle_message(&mut m).await;
 
-                                if msg.eq("Ваш заказ принят") {
+                                if msg.eq(ORDER_RECEIVED_MESSAGE) {
                                     let order =
                                         self.orders.get(&m.body.sender_data.chat_id).unwrap();
                                     self.log_to_admin(format!("Заказ {}", order)).await;
@@ -201,7 +208,7 @@ impl Bot {
             }
             "size_selected" => {
                 if (msg.eq("готово") | msg.eq("Готово")) && !saved.images.is_empty() {
-                    "Ваш заказ принят".to_string()
+                    ORDER_RECEIVED_MESSAGE.to_string()
                 } else {
                     READY.to_string()
                 }

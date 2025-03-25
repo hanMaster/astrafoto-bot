@@ -340,21 +340,19 @@ fn init_paper() -> BTreeMap<String, Vec<String>> {
 
     let mut data: BTreeMap<String, Vec<String>> = BTreeMap::new();
 
-    for line in lines {
-        if let Ok(line) = line {
-            let parts = line.split(':').collect::<Vec<&str>>();
-            if parts.len() != 2 {
-                panic!(
-                    "Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб"
-                );
-            }
-            let paper_name = parts[0].to_string();
-            let sizes = parts[1]
-                .split(";")
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>();
-            data.insert(paper_name, sizes);
+    for line in lines.map_while(Result::ok) {
+        let parts = line.split(':').collect::<Vec<&str>>();
+        if parts.len() != 2 {
+            panic!(
+                "Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб"
+            );
         }
+        let paper_name = parts[0].to_string();
+        let sizes = parts[1]
+            .split(";")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        data.insert(paper_name, sizes);
     }
     data
 }

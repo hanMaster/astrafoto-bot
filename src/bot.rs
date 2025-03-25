@@ -207,7 +207,7 @@ impl Bot {
                 }
             }
             "size_selected" => {
-                if (msg.eq("готово") | msg.eq("Готово")) && !saved.images.is_empty() {
+                if msg.to_lowercase().eq("готово") && !saved.images.is_empty() {
                     ORDER_RECEIVED_MESSAGE.to_string()
                 } else {
                     READY.to_string()

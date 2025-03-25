@@ -1,8 +1,10 @@
 use crate::data_types::{Order, OrderMessage, RootMsg, SendMessage};
-use std::collections::{BTreeMap, HashMap};
+use dashmap::DashMap;
+use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fs::File;
 use std::io::BufRead;
+use std::time::SystemTime;
 
 pub struct Bot {
     api_url: String,
@@ -11,7 +13,7 @@ pub struct Bot {
     admin_chat_id: String,
     paper: BTreeMap<String, Vec<String>>,
     paper_vec: Vec<String>,
-    orders: HashMap<String, Order>,
+    orders: DashMap<String, Order>,
 }
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
@@ -42,7 +44,7 @@ impl Bot {
             admin_chat_id,
             paper,
             paper_vec,
-            orders: HashMap::new(),
+            orders: DashMap::new(),
         }
     }
 
@@ -68,16 +70,15 @@ impl Bot {
                             if m.body.message_data.type_message.eq("imageMessage") {
                                 self.handle_image(&mut m).await;
                                 self.delete_notification(m.receipt_id).await;
+                                println!("{:#?}", self.orders);
                             } else {
                                 let msg = self.handle_message(&mut m).await;
 
                                 if msg.eq(ORDER_RECEIVED_MESSAGE) {
-                                    let order =
-                                        self.orders.get(&m.body.sender_data.chat_id).unwrap();
-                                    self.log_to_admin(format!("Заказ {}", order)).await;
-                                    let ord =
+                                    let (_, order) =
                                         self.orders.remove(&m.body.sender_data.chat_id).unwrap();
-                                    self.send_order(ord).await;
+                                    self.log_to_admin(format!("Заказ {}", order)).await;
+                                    self.send_order(order).await;
                                 }
 
                                 println!("{:#?}", self.orders);
@@ -87,6 +88,14 @@ impl Bot {
                         }
                         Err(_) => {
                             println!("Новых сообщений нет");
+                            // println!(
+                            //     "{:#?} {}",
+                            //     self.orders,
+                            //     SystemTime::now()
+                            //         .duration_since(UNIX_EPOCH)
+                            //         .unwrap()
+                            //         .as_secs()
+                            // );
                             self.maybe_need_ask().await;
                         }
                     }
@@ -146,8 +155,8 @@ impl Bot {
 
     async fn handle_image(&mut self, message: &mut RootMsg) {
         let chat_id = message.body.sender_data.chat_id.clone();
-        let saved = self.orders.entry(chat_id.clone()).or_default();
-        saved.chat_id = chat_id.clone();
+        let mut saved = self.orders.entry(chat_id.clone()).or_default();
+        saved.chat_id = chat_id;
         saved.customer_name = message.body.sender_data.sender_name.clone();
         // safe to unwrap since message type is imageMessage
         let image_url = message
@@ -162,7 +171,7 @@ impl Bot {
 
     async fn handle_message(&mut self, message: &mut RootMsg) -> String {
         let chat_id = message.body.sender_data.chat_id.clone();
-        let saved = self.orders.entry(chat_id.clone()).or_default();
+        let mut saved = self.orders.entry(chat_id.clone()).or_default();
         saved.chat_id = chat_id;
         saved.customer_name = message.body.sender_data.sender_name.clone();
 
@@ -178,16 +187,20 @@ impl Bot {
             "".to_string()
         };
 
-        match saved.state.as_str() {
+        match saved.state {
             "new" => {
-                saved.state = "paper_requested".to_string();
+                saved.state = "paper_requested";
+                saved.iter_count = 1;
+                saved.last_update_time = SystemTime::now();
                 self.paper_prompt()
             }
             "paper_requested" => {
                 let paper_type: usize = msg.parse().unwrap_or(0);
                 if paper_type > 0 && paper_type <= self.paper_vec.len() {
                     saved.paper = self.paper_vec[paper_type - 1].clone();
-                    saved.state = "size_requested".to_string();
+                    saved.state = "size_requested";
+                    saved.iter_count = 1;
+                    saved.last_update_time = SystemTime::now();
                     let paper = saved.paper.clone();
                     self.size_prompt(&paper)
                 } else {
@@ -200,7 +213,9 @@ impl Bot {
                 let sizes = sizes_vec(&self.paper, &paper);
                 if size > 0 && size <= sizes.len() {
                     saved.size = sizes[size - 1].clone();
-                    saved.state = "size_selected".to_string();
+                    saved.state = "size_selected";
+                    saved.iter_count = 1;
+                    saved.last_update_time = SystemTime::now();
                     READY.to_string()
                 } else {
                     self.size_prompt(&paper)
@@ -219,29 +234,51 @@ impl Bot {
     }
 
     async fn maybe_need_ask(&mut self) {
-        let mut clients_to_update: Vec<String> = vec![];
-        for o in self.orders.values() {
+        let mut orders_to_remove = vec![];
+        for mut o in self.orders.iter_mut() {
             if !o.images.is_empty() && o.state.eq("new") {
                 self.send_message(o.chat_id.clone(), self.paper_prompt())
                     .await;
-                clients_to_update.push(o.chat_id.clone());
-            } else if !o.images.is_empty() && o.state.eq("paper_requested") {
-                self.send_message(o.chat_id.clone(), self.paper_prompt())
-                    .await;
-            } else if !o.images.is_empty() && o.state.eq("size_requested") {
-                self.send_message(o.chat_id.clone(), self.size_prompt(&o.paper))
-                    .await;
-            } else if !o.images.is_empty() && o.state.eq("size_selected") {
-                self.send_message(o.chat_id.clone(), READY.to_string())
-                    .await;
+                o.state = "paper_requested";
+                o.iter_count = 1;
+                o.last_update_time = SystemTime::now();
+            } else if !o.images.is_empty()
+                && (o.state.eq("paper_requested")
+                    || o.state.eq("size_requested")
+                    || o.state.eq("size_selected"))
+            {
+                if o.iter_count < 4 && o.last_update_time.elapsed().unwrap().as_secs() > 30 {
+                    o.iter_count += 1;
+                    o.last_update_time = SystemTime::now();
+
+                    let msg = if o.state.eq("paper_requested") {
+                        self.paper_prompt()
+                    } else if o.state.eq("size_requested") {
+                        self.size_prompt(&o.paper)
+                    } else {
+                        READY.to_string()
+                    };
+
+                    self.send_message(o.chat_id.clone(), msg).await;
+                } else if o.iter_count < 4 && o.last_update_time.elapsed().unwrap().as_secs() < 30 {
+                } else {
+                    orders_to_remove.push(o.chat_id.clone());
+                }
+            } else if o.images.is_empty() {
+                // Delete order without images after 1 minute
+                if o.last_update_time.elapsed().unwrap().as_secs() > 60 {
+                    orders_to_remove.push(o.chat_id.clone());
+                }
             }
         }
-
-        clients_to_update.iter().for_each(|c| {
-            self.orders
-                .entry(c.clone())
-                .and_modify(|o| o.state = "paper_requested".to_string());
-        });
+        for chat_id in orders_to_remove {
+            self.orders.remove(&chat_id);
+            self.send_message(
+                chat_id.clone(),
+                "Заказ отменен, из-за длительного ожидания".to_string(),
+            )
+            .await;
+        }
     }
 
     fn paper_prompt(&self) -> String {

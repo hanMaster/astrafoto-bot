@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::time::SystemTime;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextMessageData {
@@ -94,7 +95,9 @@ pub struct Order {
     pub paper: String,
     pub size: String,
     pub images: Vec<String>,
-    pub state: String,
+    pub state: &'static str,
+    pub last_update_time: SystemTime,
+    pub iter_count: i32,
 }
 
 impl Default for Order {
@@ -122,7 +125,9 @@ impl Order {
             paper: "".to_string(),
             size: "".to_string(),
             images: vec![],
-            state: "new".to_string(),
+            state: "new",
+            last_update_time: SystemTime::now(),
+            iter_count: 0,
         }
     }
 }

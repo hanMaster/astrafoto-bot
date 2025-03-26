@@ -5,13 +5,9 @@ mod data_types;
 mod config;
 mod error;
 
-
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let mut bot = Bot::new();
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(bot.run());
+    bot.run().await;
     Ok(())
 }

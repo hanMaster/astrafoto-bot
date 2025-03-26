@@ -1,3 +1,4 @@
+use crate::config::config;
 use crate::data_types::{Order, OrderMessage, RootMsg, SendMessage};
 use dashmap::DashMap;
 use std::collections::BTreeMap;
@@ -26,22 +27,14 @@ const ORDER_RECEIVED_MESSAGE: &str = r#"Ваш заказ принят!
 тел: 8-(423)-244-97-34"#;
 
 impl Bot {
-    pub fn from_env() -> Self {
-        dotenvy::dotenv().ok();
-        let api_url = std::env::var("API_URL").expect("API_URL must be set");
-        let id_instance = std::env::var("ID_INSTANCE").expect("ID_INSTANCE must be set");
-        let api_token_instance =
-            std::env::var("API_TOKEN_INSTANCE").expect("API_TOKEN_INSTANCE must be set");
-        let admin_chat_id = std::env::var("ADMIN_CHAT_ID").expect("ADMIN_CHAT_ID must be set");
-        let worker_url = std::env::var("WORKER_URL").expect("WORKER_URL must be set");
-
+    pub fn new() -> Self {
         let paper = init_paper();
         let paper_vec = paper.iter().map(|p| p.0.to_string()).collect();
         Self {
-            api_url: format!("{}/waInstance{}", api_url, id_instance),
-            token: api_token_instance,
-            worker_url,
-            admin_chat_id,
+            api_url: format!("{}/waInstance{}", &config().API_URL, &config().ID_INSTANCE),
+            token: config().API_TOKEN_INSTANCE.to_string(),
+            worker_url: config().WORKER_URL.to_string(),
+            admin_chat_id: config().ADMIN_CHAT_ID.to_string(),
             paper,
             paper_vec,
             orders: DashMap::new(),

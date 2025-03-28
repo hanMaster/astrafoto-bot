@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use crate::stuff;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -6,7 +7,16 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum Error {
     // -- Config
     ConfigMissingEnv(&'static str),
+    App(stuff::error::Error)
 }
+
+//region      --- From
+impl From<stuff::error::Error> for Error {
+    fn from(value: stuff::error::Error) -> Self {
+        Error::App(value)
+    }
+}
+//endregion   --- From
 
 // region:    --- Error boilerplate
 impl Display for Error {

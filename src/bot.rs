@@ -3,8 +3,6 @@ use crate::data_types::{Order, OrderMessage, RootMsg, SendMessage};
 use dashmap::DashMap;
 use std::collections::BTreeMap;
 use std::fmt::Write;
-use std::fs::File;
-use std::io::BufRead;
 use std::time::SystemTime;
 
 pub struct Bot {
@@ -17,7 +15,7 @@ pub struct Bot {
     orders: DashMap<String, Order>,
 }
 
-const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
+
 const ORDER_RECEIVED_MESSAGE: &str = r#"Ваш заказ принят!
 
 Получение по адресу:
@@ -28,7 +26,7 @@ const ORDER_RECEIVED_MESSAGE: &str = r#"Ваш заказ принят!
 
 impl Bot {
     pub fn new() -> Self {
-        let paper = init_paper();
+        let paper: BTreeMap<String, Vec<String>> = BTreeMap::new();
         let paper_vec = paper.iter().map(|p| p.0.to_string()).collect();
         Self {
             api_url: format!("{}/waInstance{}", &config().API_URL, &config().ID_INSTANCE),
@@ -209,7 +207,7 @@ impl Bot {
                     saved.state = "size_selected";
                     saved.iter_count = 1;
                     saved.last_update_time = SystemTime::now();
-                    READY.to_string()
+                    "READY".to_string()
                 } else {
                     self.size_prompt(&paper)
                 }
@@ -218,7 +216,7 @@ impl Bot {
                 if msg.to_lowercase().eq("готово") && !saved.images.is_empty() {
                     ORDER_RECEIVED_MESSAGE.to_string()
                 } else {
-                    READY.to_string()
+                    "READY".to_string()
                 }
             }
 
@@ -249,7 +247,7 @@ impl Bot {
                     } else if o.state.eq("size_requested") {
                         self.size_prompt(&o.paper)
                     } else {
-                        READY.to_string()
+                        "READY".to_string()
                     };
 
                     self.send_message(o.chat_id.clone(), msg).await;
@@ -325,27 +323,4 @@ fn sizes_vec(p: &BTreeMap<String, Vec<String>>, paper: &str) -> Vec<String> {
         .collect()
 }
 
-fn init_paper() -> BTreeMap<String, Vec<String>> {
-    let lines = std::io::BufReader::new(
-        File::open("paper.txt").expect("File paper.txt not found in working directory"),
-    )
-    .lines();
 
-    let mut data: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-    for line in lines.map_while(Result::ok) {
-        let parts = line.split(':').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            panic!(
-                "Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб"
-            );
-        }
-        let paper_name = parts[0].to_string();
-        let sizes = parts[1]
-            .split(";")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        data.insert(paper_name, sizes);
-    }
-    data
-}

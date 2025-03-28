@@ -15,7 +15,7 @@ where
     T: Transport,
     H: MessageHandler,
 {
-    pub fn new(transport: &'a T, handler: H) -> Poller<T, H> {
+    pub fn new(transport: &'a T, handler: H) -> Poller<'a, T, H> {
         Self { transport, handler }
     }
 
@@ -23,7 +23,7 @@ where
         println!("Poller::start_polling");
         loop {
             let msg = self.transport.receive_message().await?;
-            self.handler.handle(msg);
+            self.handler.handle(msg).await;
         }
     }
 }

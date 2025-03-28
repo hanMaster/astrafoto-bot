@@ -17,7 +17,6 @@ pub struct WhatsApp {
 
 impl WhatsApp {
     pub fn new() -> Self {
-        println!("[WhatsApp] Initializing...");
         Self {
             api_url: format!("{}/waInstance{}", &config().API_URL, &config().ID_INSTANCE),
             token: config().API_TOKEN_INSTANCE.to_owned(),
@@ -46,7 +45,6 @@ impl WhatsApp {
 
 impl Transport for WhatsApp {
     async fn receive_message(&self) -> Result<Message> {
-        println!("[WhatsApp] Receive message...");
         let url = format!(
             "{}/receiveNotification/{}?receiveTimeout={}",
             self.api_url, self.token, self.timeout_seconds

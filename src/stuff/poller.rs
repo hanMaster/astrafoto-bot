@@ -2,21 +2,20 @@ use crate::stuff::error::Result;
 use crate::stuff::message_handler::MessageHandler;
 use crate::stuff::transport::Transport;
 
-pub struct Poller<T, H>
+pub struct Poller<'a, T, H>
 where
-    T: Transport,
+    T: Transport + 'a,
     H: MessageHandler,
 {
-    transport: T,
+    transport: &'a T,
     handler: H,
 }
-impl<T, H> Poller<T, H>
+impl<'a, T, H> Poller<'a, T, H>
 where
     T: Transport,
     H: MessageHandler,
 {
-    pub fn new(transport: T, handler: H) -> Self {
-        println!("Poller::new");
+    pub fn new(transport: &'a T, handler: H) -> Poller<T, H> {
         Self { transport, handler }
     }
 
@@ -41,7 +40,7 @@ mod tests {
         let transport = WhatsApp::new();
         let repo = OrderRepository::new();
         let handler = Handler::new(repo);
-        let res = Poller::new(transport, handler).start_polling().await;
+        let res = Poller::new(&transport, handler).start_polling().await;
 
         if let Err(ref e) = res {
             eprintln!("{}", e);

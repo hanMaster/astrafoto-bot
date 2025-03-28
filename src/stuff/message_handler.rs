@@ -18,7 +18,31 @@ impl<R: Repository> Handler<R> {
 impl<R: Repository + std::fmt::Debug> MessageHandler for Handler<R> {
     fn handle(&mut self, message: Message) {
         match message {
-            Message::Text(_) => {}
+            Message::Text(msg) => {
+                println!("Text message received");
+                let order_option = self.repository.get_order(&msg.chat_id);
+                if let Some(order) = order_option {
+                    match order {
+                        OrderState::RaperRequested { .. } => {
+                            // TODO send response with paper request
+                        }
+                        OrderState::SizeRequested { .. } => {
+                            // TODO send response with size request
+                        }
+                        OrderState::SizeSelected { .. } => {
+                            // TODO send response with finish request
+                        }
+                    }
+                    // let mut updated = order.clone();
+                    // updated.add_image(msg.message);
+                    // self.repository.set_order(updated);
+                    println!("Order updated in repo {:#?}", self.repository);
+                } else {
+                    self.repository.set_order(OrderState::from_txt_msg(msg));
+                    println!("Order created in repo {:#?}", self.repository);
+                    // TODO send response with paper request
+                }
+            }
             Message::Image(msg) => {
                 println!("Image message received");
                 let order_option = self.repository.get_order(&msg.chat_id);
@@ -39,12 +63,7 @@ impl<R: Repository + std::fmt::Debug> MessageHandler for Handler<R> {
                     self.repository.set_order(updated);
                     println!("Order updated in repo {:#?}", self.repository);
                 } else {
-                    let order = OrderState::RaperRequested {
-                        chat_id: msg.chat_id,
-                        customer_name: msg.customer_name,
-                        files: vec![msg.message],
-                    };
-                    self.repository.set_order(order);
+                    self.repository.set_order(OrderState::from_img_msg(msg));
                     println!("Order created in repo {:#?}", self.repository);
                     // TODO send response with paper request
                 }

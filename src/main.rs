@@ -15,6 +15,6 @@ async fn main() -> Result<()> {
     let transport = WhatsApp::new();
     let repo = OrderRepository::new();
     let handler = Handler::new(repo);
-    Poller::new(transport, handler).start_polling().await?;
+    Poller::new(&transport, handler).start_polling().await?;
     Ok(())
 }

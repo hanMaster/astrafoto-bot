@@ -35,6 +35,20 @@ pub enum OrderState {
 }
 
 impl OrderState {
+    pub fn from_img_msg(msg: ReceivedMessage) -> OrderState {
+        OrderState::RaperRequested {
+            chat_id: msg.chat_id,
+            customer_name: msg.customer_name,
+            files: vec![msg.message],
+        }
+    }
+    pub fn from_txt_msg(msg: ReceivedMessage) -> OrderState {
+        OrderState::RaperRequested {
+            chat_id: msg.chat_id,
+            customer_name: msg.customer_name,
+            files: vec![],
+        }
+    }
     pub fn get_chat_id(&self) -> String {
         match self {
             OrderState::RaperRequested { chat_id, .. } => chat_id.to_string(),

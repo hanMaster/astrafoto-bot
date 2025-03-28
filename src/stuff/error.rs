@@ -7,6 +7,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum Error {
     Request(reqwest::Error),
     FailedToGetNewMessage(StatusCode, String),
+    OrderNotFound(String),
 }
 
 // region:    ---From

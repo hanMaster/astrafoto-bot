@@ -1,6 +1,6 @@
 use crate::config::config;
 use crate::data_types::{RootMsg, SendMessage};
-use crate::stuff::data_types::Message;
+use crate::stuff::data_types::{Message, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
 use reqwest::StatusCode;
 pub trait Transport {
@@ -60,8 +60,9 @@ impl Transport for WhatsApp {
                     Ok(mut m) => {
                         self.delete_notification(m.receipt_id).await;
                         match m.body.message_data.type_message.as_ref() {
-                            "imageMessage" => Ok(Message::Image(SendMessage {
+                            "imageMessage" => Ok(Message::Image(ReceivedMessage {
                                 chat_id: m.body.sender_data.chat_id,
+                                customer_name: m.body.sender_data.sender_name,
                                 message: m
                                     .body
                                     .message_data
@@ -70,8 +71,9 @@ impl Transport for WhatsApp {
                                     .unwrap()
                                     .download_url,
                             })),
-                            "textMessage" => Ok(Message::Text(SendMessage {
+                            "textMessage" => Ok(Message::Text(ReceivedMessage {
                                 chat_id: m.body.sender_data.chat_id,
+                                customer_name: m.body.sender_data.sender_name,
                                 message: m
                                     .body
                                     .message_data

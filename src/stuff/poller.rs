@@ -1,33 +1,47 @@
-use crate::stuff::transport::{Transport, WhatsApp};
 use crate::stuff::error::Result;
+use crate::stuff::message_handler::MessageHandler;
+use crate::stuff::transport::Transport;
 
-pub struct Poller<T: Transport> where T: Transport {
+pub struct Poller<T, H>
+where
+    T: Transport,
+    H: MessageHandler,
+{
     transport: T,
+    handler: H,
 }
-impl<T: Transport> Poller<T> {
-    pub fn new(transport: T) -> Self {
+impl<T, H> Poller<T, H>
+where
+    T: Transport,
+    H: MessageHandler,
+{
+    pub fn new(transport: T, handler: H) -> Self {
         println!("Poller::new");
-        Self { transport }
+        Self { transport, handler }
     }
 
-    pub async fn start_polling(&self) -> Result<()> {
+    pub async fn start_polling(&mut self) -> Result<()> {
         println!("Poller::start_polling");
         loop {
             let msg = self.transport.receive_message().await?;
-            println!("Message: {:?}", msg);
+            self.handler.handle(msg);
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::stuff::transport::WhatsApp;
     use super::*;
+    use crate::stuff::message_handler::Handler;
+    use crate::stuff::repository::OrderRepository;
+    use crate::stuff::transport::WhatsApp;
 
     #[tokio::test]
     async fn test_poll() {
         let transport = WhatsApp::new();
-        let res = Poller::new(transport).start_polling().await;
+        let repo = OrderRepository::new();
+        let handler = Handler::new(repo);
+        let res = Poller::new(transport, handler).start_polling().await;
 
         if let Err(ref e) = res {
             eprintln!("{}", e);

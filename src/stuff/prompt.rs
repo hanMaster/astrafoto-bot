@@ -5,6 +5,14 @@ use std::io::BufRead;
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
 
+const FINAL: &str = r#"Ваш заказ принят!
+
+Получение по адресу:
+г. Владивосток,
+Партизанский пр-т, 16, Картинная галерея
+
+тел: 8-(423)-244-97-34"#;
+
 pub struct Prompt {
     paper: BTreeMap<String, Vec<String>>,
     pub paper_vec: Vec<String>,
@@ -28,7 +36,7 @@ impl Prompt {
     }
 
     pub fn size_prompt(&self, paper: &str) -> String {
-        sizes_vec(&self.paper, paper).iter().enumerate().fold(
+        self.sizes_vec(paper).iter().enumerate().fold(
             "Выберите размер фотографий: \n".to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {b}", idx + 1);
@@ -40,15 +48,19 @@ impl Prompt {
     pub fn ready_prompt(&self) -> String {
         READY.to_owned()
     }
-}
 
-fn sizes_vec(p: &BTreeMap<String, Vec<String>>, paper: &str) -> Vec<String> {
-    let s = vec![];
-    p.get(paper)
-        .unwrap_or(&s)
-        .iter()
-        .map(|p| p.to_string())
-        .collect()
+    pub fn final_prompt(&self) -> String {
+        FINAL.to_owned()
+    }
+
+    pub fn sizes_vec(&self, paper: &str) -> Vec<String> {
+        let s = vec![];
+        self.paper.get(paper)
+            .unwrap_or(&s)
+            .iter()
+            .map(|p| p.to_string())
+            .collect()
+    }
 }
 
 fn init_paper() -> BTreeMap<String, Vec<String>> {

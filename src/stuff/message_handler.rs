@@ -29,6 +29,7 @@ where
             prompt: Prompt::new(),
         }
     }
+
     async fn handle_image_message(&mut self, message: ReceivedMessage) {
         let chat_id = message.chat_id.clone();
         let order_option = self.repository.get_order(&message.chat_id);
@@ -41,7 +42,7 @@ where
                     self.send_size_request(chat_id, paper).await;
                 }
                 OrderState::SizeSelected { .. } => {
-                    self.send_final_request(chat_id).await;
+                    self.send_ready_request(chat_id).await;
                 }
             }
             let mut updated = order.clone();
@@ -60,12 +61,16 @@ where
         let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
             match order {
-                OrderState::RaperRequested { customer_name, files, .. } => {
+                OrderState::RaperRequested {
+                    customer_name,
+                    files,
+                    ..
+                } => {
                     let paper_type: usize = message.message.parse().unwrap_or(0);
                     if paper_type > 0 && paper_type <= self.prompt.paper_vec.len() {
                         let paper = self.prompt.paper_vec[paper_type - 1].clone();
                         self.send_size_request(chat_id.clone(), &paper).await;
-                        let new_state = OrderState::SizeRequested{
+                        let new_state = OrderState::SizeRequested {
                             chat_id,
                             customer_name: customer_name.clone(),
                             paper,
@@ -76,11 +81,39 @@ where
                         self.send_paper_request(chat_id).await;
                     }
                 }
-                OrderState::SizeRequested { .. } => {
-                    // TODO send response with size request
+
+                OrderState::SizeRequested {
+                    customer_name,
+                    paper,
+                    files,
+                    ..
+                } => {
+                    let size: usize = message.message.parse().unwrap_or(0);
+                    let sizes = self.prompt.sizes_vec(paper);
+                    if size > 0 && size <= sizes.len() {
+                        let size = sizes[size - 1].clone();
+                        self.send_ready_request(chat_id.clone()).await;
+                        let new_state = OrderState::SizeSelected {
+                            chat_id,
+                            customer_name: customer_name.clone(),
+                            paper: paper.clone(),
+                            size,
+                            files: files.clone(),
+                        };
+                        self.repository.set_order(new_state);
+                    } else {
+                        self.send_size_request(chat_id.clone(), &paper).await;
+                    }
                 }
-                OrderState::SizeSelected { .. } => {
-                    // TODO send response with finish request
+
+                OrderState::SizeSelected { files, .. } => {
+                    if message.message.to_lowercase().eq("готово") && !files.is_empty() {
+                        // TODO send order to microservice
+                        let _ = self.repository.delete_order(&chat_id);
+                        self.send_final_request(chat_id).await;
+                    } else {
+                        self.send_ready_request(chat_id).await;
+                    }
                 }
             }
             println!("Order updated in repo {:#?}", self.repository);
@@ -111,10 +144,20 @@ where
         };
     }
 
-    async fn send_final_request(&self, chat_id: String) {
+    async fn send_ready_request(&self, chat_id: String) {
         let res = self
             .transport
             .send_message(chat_id, self.prompt.ready_prompt())
+            .await;
+        if let Err(e) = res {
+            eprintln!("Error sending ready request: {}", e);
+        };
+    }
+
+    async fn send_final_request(&self, chat_id: String) {
+        let res = self
+            .transport
+            .send_message(chat_id, self.prompt.final_prompt())
             .await;
         if let Err(e) = res {
             eprintln!("Error sending final request: {}", e);

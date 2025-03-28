@@ -16,13 +16,6 @@ pub struct Bot {
 }
 
 
-const ORDER_RECEIVED_MESSAGE: &str = r#"Ваш заказ принят!
-
-Получение по адресу:
-г. Владивосток,
-Партизанский пр-т, 16, Картинная галерея
-
-тел: 8-(423)-244-97-34"#;
 
 impl Bot {
     pub fn new() -> Self {
@@ -65,7 +58,7 @@ impl Bot {
                             } else {
                                 let msg = self.handle_message(&mut m).await;
 
-                                if msg.eq(ORDER_RECEIVED_MESSAGE) {
+                                if msg.eq("ORDER_RECEIVED_MESSAGE") {
                                     let (_, order) =
                                         self.orders.remove(&m.body.sender_data.chat_id).unwrap();
                                     self.log_to_admin(format!("Заказ {}", order)).await;
@@ -214,7 +207,7 @@ impl Bot {
             }
             "size_selected" => {
                 if msg.to_lowercase().eq("готово") && !saved.images.is_empty() {
-                    ORDER_RECEIVED_MESSAGE.to_string()
+                    "ORDER_RECEIVED_MESSAGE".to_string()
                 } else {
                     "READY".to_string()
                 }

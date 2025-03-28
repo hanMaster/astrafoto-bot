@@ -81,7 +81,7 @@ pub struct FileMessageData {
     pub is_forwarded: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SendMessage {
     #[serde(rename = "chatId")]
     pub chat_id: String,

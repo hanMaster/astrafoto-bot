@@ -28,5 +28,10 @@ mod tests {
     async fn test_poll() {
         let transport = WhatsApp::new();
         let res = Poller::new(transport).start_polling().await;
+
+        if let Err(ref e) = res {
+            eprintln!("{}", e);
+            assert!(res.is_ok());
+        }
     }
 }

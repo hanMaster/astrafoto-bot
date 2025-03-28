@@ -39,7 +39,7 @@ mod tests {
     async fn test_poll() {
         let transport = WhatsApp::new();
         let repo = OrderRepository::new();
-        let handler = Handler::new(repo);
+        let handler = Handler::new(repo, &transport);
         let res = Poller::new(&transport, handler).start_polling().await;
 
         if let Err(ref e) = res {

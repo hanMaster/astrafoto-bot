@@ -1,5 +1,5 @@
 use crate::stuff::transport::Transport;
-use log::{Metadata, Record};
+use log::{Level, Metadata, Record};
 
 pub struct Logger<'a, T>
 where
@@ -21,12 +21,15 @@ impl<'a, T> log::Log for Logger<T>
 where
     T: Transport + 'a,
 {
-    fn enabled(&self, _: &Metadata) -> bool {
-        true
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
     }
 
     async fn log(&self, record: &Record) {
-        self.transport.log(record.args().to_string()).await;
+        if self.enabled(record.metadata()) {
+            let msg = format!("{} - {}", record.level(), record.args());
+            self.transport.log(msg).await;
+        }
     }
 
     fn flush(&self) {}

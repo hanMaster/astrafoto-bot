@@ -8,7 +8,6 @@ pub trait Transport {
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
 
     async fn send_order(&self, order: OrderState);
-    async fn log(&self, message: String);
 }
 
 pub struct WhatsApp {
@@ -133,10 +132,6 @@ impl Transport for WhatsApp {
                 self.log_to_admin(msg).await;
             }
         }
-    }
-
-    async fn log(&self, message: String) {
-        self.log_to_admin(message).await;
     }
 }
 

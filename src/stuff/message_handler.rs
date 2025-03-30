@@ -62,6 +62,13 @@ where
         let chat_id = message.chat_id.clone();
         let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
+            /// Клиент пожелал отменить заказ
+            if message.message.to_lowercase().contains("отмен") {
+                let _ = self.repository.delete_order(&chat_id);
+                self.send_cancel(chat_id).await;
+                return;
+            }
+
             match order {
                 OrderState::RaperRequested { .. } => {
                     let res = self.try_set_paper(order, message);
@@ -89,7 +96,7 @@ where
                 }
 
                 OrderState::SizeSelected { files, .. } => {
-                    if message.message.to_lowercase().eq("готово") && !files.is_empty() {
+                    if message.message.to_lowercase().contains("готов") && !files.is_empty() {
                         // TODO send order to microservice
                         let _ = self.repository.delete_order(&chat_id);
                         self.send_final_request(chat_id).await;
@@ -172,6 +179,16 @@ where
             eprintln!("Error sending final request: {}", e);
         };
     }
+
+    async fn send_cancel(&self, chat_id: String) {
+        let res = self
+            .transport
+            .send_message(chat_id, "Ваш заказ отменен".to_string())
+            .await;
+        if let Err(e) = res {
+            eprintln!("Error sending final request: {}", e);
+        };
+    }
 }
 
 impl<R, T> MessageHandler for Handler<'_, R, T>
@@ -222,6 +239,14 @@ mod test {
             chat_id: "79146795555@c.us".to_string(),
             customer_name: "Andrey".to_string(),
             message: "1".to_string(),
+        };
+        handler.handle_text_message(size_answer).await;
+        println!("{:#?}", handler.repository);
+
+        let size_answer = ReceivedMessage{
+            chat_id: "79146795555@c.us".to_string(),
+            customer_name: "Andrey".to_string(),
+            message: "Отмените".to_string(),
         };
         handler.handle_text_message(size_answer).await;
         println!("{:#?}", handler.repository);

@@ -28,9 +28,7 @@ impl Paper {
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)
             .expect("paper.json read error");
-        let data =
-            serde_json::from_str::<Vec<PaperType>>(&buffer).expect("paper.json decode error");
-        data
+        serde_json::from_str::<Vec<PaperType>>(&buffer).expect("paper.json decode error")
     }
 
     pub fn paper_vec(&self) -> Vec<String> {

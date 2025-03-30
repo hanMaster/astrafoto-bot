@@ -62,7 +62,7 @@ where
         let chat_id = message.chat_id.clone();
         let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
-            /// Клиент пожелал отменить заказ
+            // Клиент пожелал отменить заказ
             if message.message.to_lowercase().contains("отмен") {
                 let _ = self.repository.delete_order(&chat_id);
                 self.send_cancel(chat_id).await;
@@ -95,9 +95,9 @@ where
                     }
                 }
 
-                OrderState::SizeSelected { files, .. } => {
-                    if message.message.to_lowercase().contains("готов") && !files.is_empty() {
-                        // TODO send order to microservice
+                OrderState::SizeSelected { .. } => {
+                    if message.message.to_lowercase().contains("готов") && order.have_files() {
+                        self.transport.send_order(order).await;
                         let _ = self.repository.delete_order(&chat_id);
                         self.send_final_request(chat_id).await;
                     } else {

@@ -1,15 +1,8 @@
+use crate::config::config;
 use crate::stuff::paper::Paper;
 use std::fmt::Write;
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
-
-const FINAL: &str = r#"Ваш заказ принят!
-
-Получение по адресу:
-г. Владивосток,
-Партизанский пр-т, 16, Картинная галерея
-
-тел: 8-(423)-244-97-34"#;
 
 pub struct Prompt {
     paper: Paper,
@@ -64,7 +57,11 @@ impl Prompt {
     }
 
     pub fn final_prompt(&self) -> String {
-        FINAL.to_owned()
+        format!(
+            "Ваш заказ принят!\n\nПолучение по адресу:{}\nтел: {}",
+            config().SHOP_ADDRESS,
+            config().SHOP_PHONE
+        )
     }
 }
 

@@ -1,11 +1,13 @@
 use crate::config::config;
 use crate::data_types::{RootMsg, SendMessage};
-use crate::stuff::data_types::{Message, ReceivedMessage};
+use crate::stuff::data_types::{Message, OrderMessage, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
 use reqwest::StatusCode;
 pub trait Transport {
     async fn receive_message(&self) -> Result<Message>;
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
+
+    async fn send_order(&self, order: OrderState);
 }
 
 pub struct WhatsApp {
@@ -13,6 +15,7 @@ pub struct WhatsApp {
     token: String,
     admin_chat_id: String,
     timeout_seconds: u16,
+    worker_url: String,
 }
 
 impl WhatsApp {
@@ -22,6 +25,7 @@ impl WhatsApp {
             token: config().API_TOKEN_INSTANCE.to_owned(),
             admin_chat_id: config().ADMIN_CHAT_ID.to_owned(),
             timeout_seconds: 5,
+            worker_url: config().WORKER_URL.to_owned(),
         }
     }
 
@@ -107,6 +111,27 @@ impl Transport for WhatsApp {
             .await?;
         Ok(())
     }
+
+    async fn send_order(&self, order: OrderState) {
+        let send_result = reqwest::Client::new()
+            .post(&self.worker_url)
+            .json::<OrderMessage>(&order.into())
+            .send()
+            .await;
+        match send_result {
+            Ok(response) => {
+                println!(
+                    "Order sent successfully! Response: {}",
+                    response.text().await.unwrap()
+                );
+            }
+            Err(e) => {
+                let msg = format!("Failed to send order to worker! Error: {}", e);
+                eprintln!("{msg}");
+                self.log_to_admin(msg).await;
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -124,5 +149,9 @@ impl Transport for MockTransport {
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()> {
         println!("Sending message to: {}, {}", chat_id, &msg);
         Ok(())
+    }
+
+    async fn send_order(&self, order: OrderState) {
+        println!("Sending order to: {:?}", &order);
     }
 }

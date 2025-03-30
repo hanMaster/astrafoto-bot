@@ -1,4 +1,5 @@
 use crate::stuff::error::{Error, Result};
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -80,6 +81,16 @@ impl OrderState {
         }
     }
 
+    pub fn have_files(&self) -> bool {
+        match self {
+            OrderState::RaperRequested { .. } => {unreachable!()}
+            OrderState::SizeRequested { .. } => {unreachable!()}
+            OrderState::SizeSelected { files, .. } => {
+                !files.is_empty()
+            }
+        }
+    }
+
     pub fn into_order_with_paper(self, paper: String) -> Result<OrderState> {
         match self {
             OrderState::RaperRequested {
@@ -114,6 +125,44 @@ impl OrderState {
                 files,
             }),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct OrderMessage {
+    pub phone: String,
+    pub name: String,
+    pub paper_type: String,
+    pub paper_size: String,
+    pub files: Vec<String>,
+}
+
+impl From<OrderState> for OrderMessage {
+    fn from(order: OrderState) -> Self {
+        match order {
+            OrderState::RaperRequested { .. } => {
+                unreachable!()
+            }
+            OrderState::SizeRequested { .. } => {
+                unreachable!()
+            }
+            OrderState::SizeSelected {
+                chat_id,
+                customer_name,
+                paper,
+                size,
+                files,
+            } => {
+                let phone = chat_id.split('@').collect::<Vec<&str>>()[0];
+                Self {
+                    phone: phone.to_string(),
+                    name: customer_name,
+                    paper_type: paper,
+                    paper_size: size,
+                    files,
+                }
+            }
         }
     }
 }

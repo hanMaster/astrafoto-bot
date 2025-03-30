@@ -22,6 +22,8 @@ pub struct Config {
     pub API_TOKEN_INSTANCE: String,
     pub ADMIN_CHAT_ID: String,
     pub WORKER_URL: String,
+    pub SHOP_ADDRESS: String,
+    pub SHOP_PHONE: String,
 }
 
 impl Config {
@@ -33,6 +35,8 @@ impl Config {
             API_TOKEN_INSTANCE: get_env("API_TOKEN_INSTANCE")?,
             ADMIN_CHAT_ID: get_env("ADMIN_CHAT_ID")?,
             WORKER_URL: get_env("WORKER_URL")?,
+            SHOP_ADDRESS: get_env("SHOP_ADDRESS")?,
+            SHOP_PHONE: get_env("SHOP_PHONE")?,
         })
     }
 }

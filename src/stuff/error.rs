@@ -12,13 +12,13 @@ pub enum Error {
     PaperInvalid,
     SizeInvalid(String),
     OrderWrongState,
-    ParseError(ParseIntError),
+    ParseFailed(ParseIntError),
 }
 
 // region:    ---From
 impl From<ParseIntError> for Error {
     fn from(err: ParseIntError) -> Error {
-        Error::ParseError(err)
+        Error::ParseFailed(err)
     }
 }
 

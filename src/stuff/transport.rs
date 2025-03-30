@@ -1,5 +1,5 @@
 use crate::config::config;
-use crate::data_types::{RootMsg, SendMessage};
+use crate::stuff::wa_types::{RootMsg, SendMessage};
 use crate::stuff::data_types::{Message, OrderMessage, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
 use reqwest::StatusCode;
@@ -115,7 +115,7 @@ impl Transport for WhatsApp {
     async fn send_order(&self, order: OrderState) {
         let send_result = reqwest::Client::new()
             .post(&self.worker_url)
-            .json::<OrderMessage>(&order.into())
+            .json::<OrderMessage>(&order.clone().into())
             .send()
             .await;
         match send_result {
@@ -124,6 +124,7 @@ impl Transport for WhatsApp {
                     "Order sent successfully! Response: {}",
                     response.text().await.unwrap()
                 );
+                self.log_to_admin(format!("Заказ {}", order)).await;
             }
             Err(e) => {
                 let msg = format!("Failed to send order to worker! Error: {}", e);

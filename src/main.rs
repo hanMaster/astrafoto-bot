@@ -6,7 +6,6 @@ use crate::stuff::transport::WhatsApp;
 
 mod bot;
 mod config;
-mod data_types;
 mod error;
 mod stuff;
 

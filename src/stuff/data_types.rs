@@ -1,5 +1,6 @@
 use crate::stuff::error::{Error, Result};
 use serde::Serialize;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -83,11 +84,13 @@ impl OrderState {
 
     pub fn have_files(&self) -> bool {
         match self {
-            OrderState::RaperRequested { .. } => {unreachable!()}
-            OrderState::SizeRequested { .. } => {unreachable!()}
-            OrderState::SizeSelected { files, .. } => {
-                !files.is_empty()
+            OrderState::RaperRequested { .. } => {
+                unreachable!()
             }
+            OrderState::SizeRequested { .. } => {
+                unreachable!()
+            }
+            OrderState::SizeSelected { files, .. } => !files.is_empty(),
         }
     }
 
@@ -125,6 +128,34 @@ impl OrderState {
                 files,
             }),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
+        }
+    }
+}
+
+impl Display for OrderState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrderState::RaperRequested { .. } => {
+                unimplemented!()
+            }
+            OrderState::SizeRequested { .. } => {
+                unimplemented!()
+            }
+            OrderState::SizeSelected {
+                chat_id,
+                customer_name,
+                paper,
+                size,
+                files,
+                ..
+            } => {
+                let phone = chat_id.split('@').collect::<Vec<&str>>()[0];
+                write!(
+                    f,
+                    "Телефон: {phone}\nИмя: {}\nТип бумаги: {}\nРазмер: {}\nФайлы: {:?}",
+                    customer_name, paper, size, files
+                )
+            }
         }
     }
 }

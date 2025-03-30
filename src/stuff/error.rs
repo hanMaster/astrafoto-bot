@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::num::ParseIntError;
 use reqwest::StatusCode;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -8,9 +9,18 @@ pub enum Error {
     Request(reqwest::Error),
     FailedToGetNewMessage(StatusCode, String),
     OrderNotFound(String),
+    PaperInvalid,
+    SizeInvalid(String),
+    OrderWrongState,
+    ParseError(ParseIntError),
 }
 
 // region:    ---From
+impl From<ParseIntError> for Error {
+    fn from(err: ParseIntError) -> Error {
+        Error::ParseError(err)
+    }
+}
 
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {

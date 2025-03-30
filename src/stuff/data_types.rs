@@ -1,3 +1,5 @@
+use crate::stuff::error::{Error, Result};
+
 #[derive(Debug, Clone)]
 pub enum Message {
     Text(ReceivedMessage),
@@ -56,6 +58,13 @@ impl OrderState {
             OrderState::SizeSelected { chat_id, .. } => chat_id.to_string(),
         }
     }
+    pub fn get_paper(&self) -> &str {
+        match self {
+            OrderState::RaperRequested { .. } => "",
+            OrderState::SizeRequested { paper, .. } => paper,
+            OrderState::SizeSelected { .. } => "",
+        }
+    }
 
     pub fn add_image(&mut self, url: String) {
         match self {
@@ -68,6 +77,43 @@ impl OrderState {
             OrderState::SizeSelected { files, .. } => {
                 files.push(url);
             }
+        }
+    }
+
+    pub fn into_order_with_paper(self, paper: String) -> Result<OrderState> {
+        match self {
+            OrderState::RaperRequested {
+                chat_id,
+                customer_name,
+                files,
+            } => Ok(OrderState::SizeRequested {
+                chat_id,
+                customer_name,
+                paper,
+                files,
+            }),
+            OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
+            OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
+        }
+    }
+
+    pub fn into_order_with_size(self, size: String) -> Result<OrderState> {
+        match self {
+            OrderState::RaperRequested { .. } => Err(Error::OrderWrongState),
+            OrderState::SizeRequested {
+                chat_id,
+                customer_name,
+                paper,
+                files,
+                ..
+            } => Ok(OrderState::SizeSelected {
+                chat_id,
+                customer_name,
+                paper,
+                size,
+                files,
+            }),
+            OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::stuff::data_types::{Message, OrderState, ReceivedMessage};
+use crate::stuff::error::{Error, Result};
 use crate::stuff::prompt::Prompt;
 use crate::stuff::repository::Repository;
 use crate::stuff::transport::Transport;
@@ -38,8 +39,8 @@ where
                 OrderState::RaperRequested { .. } => {
                     self.send_paper_request(chat_id).await;
                 }
-                OrderState::SizeRequested { paper, .. } => {
-                    self.send_size_request(chat_id, paper).await;
+                OrderState::SizeRequested { .. } => {
+                    self.send_size_request(chat_id, order.get_paper()).await;
                 }
                 OrderState::SizeSelected { .. } => {
                     self.send_ready_request(chat_id).await;
@@ -61,48 +62,28 @@ where
         let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
             match order {
-                OrderState::RaperRequested {
-                    customer_name,
-                    files,
-                    ..
-                } => {
-                    let paper_type: usize = message.message.parse().unwrap_or(0);
-                    if paper_type > 0 && paper_type <= self.prompt.paper_vec.len() {
-                        let paper = self.prompt.paper_vec[paper_type - 1].clone();
-                        self.send_size_request(chat_id.clone(), &paper).await;
-                        let new_state = OrderState::SizeRequested {
-                            chat_id,
-                            customer_name: customer_name.clone(),
-                            paper,
-                            files: files.clone(),
-                        };
-                        self.repository.set_order(new_state);
-                    } else {
-                        self.send_paper_request(chat_id).await;
+                OrderState::RaperRequested { .. } => {
+                    let res = self.try_set_paper(order, message);
+                    match res {
+                        Ok(paper) => {
+                            self.send_size_request(chat_id.clone(), &paper).await;
+                        }
+                        Err(_) => {
+                            self.send_paper_request(chat_id).await;
+                        }
                     }
                 }
 
-                OrderState::SizeRequested {
-                    customer_name,
-                    paper,
-                    files,
-                    ..
-                } => {
-                    let size: usize = message.message.parse().unwrap_or(0);
-                    let sizes = self.prompt.sizes_vec(paper);
-                    if size > 0 && size <= sizes.len() {
-                        let size = sizes[size - 1].clone();
-                        self.send_ready_request(chat_id.clone()).await;
-                        let new_state = OrderState::SizeSelected {
-                            chat_id,
-                            customer_name: customer_name.clone(),
-                            paper: paper.clone(),
-                            size,
-                            files: files.clone(),
-                        };
-                        self.repository.set_order(new_state);
-                    } else {
-                        self.send_size_request(chat_id.clone(), &paper).await;
+                OrderState::SizeRequested { .. } => {
+                    let res = self.try_set_size(order, message);
+                    match res {
+                        Ok(_) => {
+                            self.send_ready_request(chat_id.clone()).await;
+                        }
+                        Err(Error::SizeInvalid(paper)) => {
+                            self.send_size_request(chat_id.clone(), &paper).await;
+                        }
+                        _ => {}
                     }
                 }
 
@@ -116,11 +97,38 @@ where
                     }
                 }
             }
-            println!("Order updated in repo {:#?}", self.repository);
+            println!("Order updated {:#?}", self.repository);
         } else {
             self.repository.set_order(OrderState::from_txt_msg(message));
-            println!("Order created in repo {:#?}", self.repository);
+            println!("Order created {:#?}", self.repository);
             self.send_paper_request(chat_id).await;
+        }
+    }
+
+    fn try_set_paper(&mut self, o: OrderState, message: ReceivedMessage) -> Result<String> {
+        let paper_type: usize = message.message.parse()?;
+        let paper_opt = self.prompt.try_get_paper(paper_type);
+        match paper_opt {
+            None => Err(Error::PaperInvalid),
+            Some(paper) => {
+                let new_state = o.into_order_with_paper(paper.clone())?;
+                self.repository.set_order(new_state);
+                Ok(paper)
+            }
+        }
+    }
+
+    fn try_set_size(&mut self, o: OrderState, message: ReceivedMessage) -> Result<()> {
+        let size_type: usize = message.message.parse()?;
+        let paper = o.get_paper().to_string();
+        let size_opt = self.prompt.try_get_size(o.get_paper(), size_type);
+        match size_opt {
+            None => Err(Error::SizeInvalid(paper)),
+            Some(size) => {
+                let new_state = o.into_order_with_size(size)?;
+                self.repository.set_order(new_state);
+                Ok(())
+            }
         }
     }
 
@@ -180,5 +188,21 @@ where
             }
             Message::Empty => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::stuff::repository::OrderRepository;
+    use crate::stuff::transport::MockTransport;
+    #[tokio::test]
+    async fn test_handle_text() {
+        let repo = OrderRepository::new();
+        let transport = MockTransport;
+        let mut handler = Handler::new(repo, &transport);
+        let msg = transport.receive_message().await.unwrap();
+        handler.handle(msg).await;
+        println!("{:#?}", handler.repository);
     }
 }

@@ -108,3 +108,21 @@ impl Transport for WhatsApp {
         Ok(())
     }
 }
+
+#[derive(Default)]
+pub struct MockTransport;
+
+impl Transport for MockTransport {
+    async fn receive_message(&self) -> Result<Message> {
+        Ok(Message::Text(ReceivedMessage {
+            chat_id: "79146796712@c.us".to_string(),
+            customer_name: "Andrey".to_string(),
+            message: "hi".to_string(),
+        }))
+    }
+
+    async fn send_message(&self, chat_id: String, msg: String) -> Result<()> {
+        println!("Sending message to: {}, {}", chat_id, &msg);
+        Ok(())
+    }
+}

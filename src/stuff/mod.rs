@@ -1,3 +1,5 @@
+pub mod paper;
+
 pub mod transport;
 pub mod data_types;
 pub mod poller;

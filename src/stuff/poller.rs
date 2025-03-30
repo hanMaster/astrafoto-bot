@@ -36,6 +36,7 @@ mod tests {
     use crate::stuff::transport::WhatsApp;
 
     #[tokio::test]
+    #[ignore]
     async fn test_poll() {
         let transport = WhatsApp::new();
         let repo = OrderRepository::new();

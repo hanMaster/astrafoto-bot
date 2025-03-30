@@ -3,7 +3,7 @@ use crate::stuff::data_types::OrderState;
 use crate::stuff::error::{Error, Result};
 
 pub trait Repository {
-    fn get_order(&self, chat_id: &str) -> Option<&OrderState>;
+    fn get_order(&self, chat_id: &str) -> Option<OrderState>;
     fn set_order(&mut self, state: OrderState);
     fn delete_order(&mut self, chat_id: &str) -> Result<()>;
 }
@@ -22,8 +22,8 @@ impl OrderRepository {
 }
 
 impl Repository for OrderRepository {
-    fn get_order(&self, chat_id: &str) -> Option<&OrderState> {
-        self.orders.get(chat_id)
+    fn get_order(&self, chat_id: &str) -> Option<OrderState> {
+        self.orders.get(chat_id).cloned()
     }
 
     fn set_order(&mut self, state: OrderState) {

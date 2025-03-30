@@ -1,7 +1,5 @@
-use std::collections::BTreeMap;
+use crate::stuff::paper::{Paper, PaperSize};
 use std::fmt::Write;
-use std::fs::File;
-use std::io::BufRead;
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
 
@@ -14,19 +12,38 @@ const FINAL: &str = r#"Ваш заказ принят!
 тел: 8-(423)-244-97-34"#;
 
 pub struct Prompt {
-    paper: BTreeMap<String, Vec<String>>,
-    pub paper_vec: Vec<String>,
+    paper: Paper,
 }
 
 impl Prompt {
     pub fn new() -> Self {
-        let paper = init_paper();
-        let paper_vec = paper.iter().map(|p| p.0.to_string()).collect();
-        Self { paper, paper_vec }
+        let paper = Paper::new();
+        Self { paper }
+    }
+
+    pub fn paper_vec(&self) -> Vec<String> {
+        self.paper.paper_vec()
+    }
+
+    pub fn try_get_paper(&self, idx: usize) -> Option<String> {
+        if idx < 0 || idx >= self.paper.paper_vec().len() {
+            None
+        } else {
+            Some(self.paper.paper_vec()[idx].clone())
+        }
+    }
+
+    pub fn try_get_size(&self, paper: &str, idx: usize) -> Option<String> {
+        let sizes = self.paper.sizes_by_paper(paper);
+        if idx < 0 || idx >= sizes.len() {
+            None
+        } else {
+            Some(format!("{}-{}руб", sizes[idx].size, sizes[idx].price))
+        }
     }
 
     pub fn paper_prompt(&self) -> String {
-        self.paper_vec.iter().enumerate().fold(
+        self.paper.paper_vec().iter().enumerate().fold(
             "Выберите тип бумаги: \n".to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {}", idx + 1, b);
@@ -35,11 +52,16 @@ impl Prompt {
         )
     }
 
+    pub fn sizes_vec(&self, paper: &str) -> Vec<PaperSize> {
+        self.paper.sizes_by_paper(paper)
+    }
+
     pub fn size_prompt(&self, paper: &str) -> String {
-        self.sizes_vec(paper).iter().enumerate().fold(
+        let sizes = self.paper.sizes_by_paper(paper);
+        sizes.iter().enumerate().fold(
             "Выберите размер фотографий: \n".to_string(),
-            |mut output, (idx, b)| {
-                let _ = writeln!(output, "{} - {b}", idx + 1);
+            |mut output, (idx, p)| {
+                let _ = writeln!(output, "{} - {} {}руб/шт", idx + 1, p.size, p.price);
                 output
             },
         )
@@ -52,38 +74,23 @@ impl Prompt {
     pub fn final_prompt(&self) -> String {
         FINAL.to_owned()
     }
-
-    pub fn sizes_vec(&self, paper: &str) -> Vec<String> {
-        let s = vec![];
-        self.paper.get(paper)
-            .unwrap_or(&s)
-            .iter()
-            .map(|p| p.to_string())
-            .collect()
-    }
 }
 
-fn init_paper() -> BTreeMap<String, Vec<String>> {
-    let lines = std::io::BufReader::new(
-        File::open("paper.txt").expect("File paper.txt not found in working directory"),
-    )
-    .lines();
-
-    let mut data: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-    for line in lines.map_while(Result::ok) {
-        let parts = line.split(':').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            panic!(
-                "Ошибка формата файла paper.txt\nПример строки:\nглянцевая:10x15 - 22руб;13x18 - 30руб;15x21 - 36руб;15x23 - 40руб"
-            );
-        }
-        let paper_name = parts[0].to_string();
-        let sizes = parts[1]
-            .split(";")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        data.insert(paper_name, sizes);
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn paper_prompt() {
+        let prompt = Prompt::new();
+        let prompt_str = prompt.paper_prompt();
+        println!("{}", prompt_str);
+        assert!(prompt_str.len() > 0);
     }
-    data
+    #[test]
+    fn sizes_prompt() {
+        let prompt = Prompt::new();
+        let prompt_str = prompt.size_prompt("глянцевая");
+        println!("{}", prompt_str);
+        assert!(prompt_str.len() > 0);
+    }
 }

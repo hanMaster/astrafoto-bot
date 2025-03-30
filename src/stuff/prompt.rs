@@ -1,4 +1,4 @@
-use crate::stuff::paper::{Paper, PaperSize};
+use crate::stuff::paper::Paper;
 use std::fmt::Write;
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
@@ -21,12 +21,8 @@ impl Prompt {
         Self { paper }
     }
 
-    pub fn paper_vec(&self) -> Vec<String> {
-        self.paper.paper_vec()
-    }
-
     pub fn try_get_paper(&self, idx: usize) -> Option<String> {
-        if idx < 0 || idx >= self.paper.paper_vec().len() {
+        if idx >= self.paper.paper_vec().len() {
             None
         } else {
             Some(self.paper.paper_vec()[idx].clone())
@@ -35,7 +31,7 @@ impl Prompt {
 
     pub fn try_get_size(&self, paper: &str, idx: usize) -> Option<String> {
         let sizes = self.paper.sizes_by_paper(paper);
-        if idx < 0 || idx >= sizes.len() {
+        if idx >= sizes.len() {
             None
         } else {
             Some(format!("{}-{}руб", sizes[idx].size, sizes[idx].price))
@@ -50,10 +46,6 @@ impl Prompt {
                 output
             },
         )
-    }
-
-    pub fn sizes_vec(&self, paper: &str) -> Vec<PaperSize> {
-        self.paper.sizes_by_paper(paper)
     }
 
     pub fn size_prompt(&self, paper: &str) -> String {

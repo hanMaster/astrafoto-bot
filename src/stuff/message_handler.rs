@@ -6,6 +6,7 @@ use crate::stuff::transport::Transport;
 
 pub trait MessageHandler {
     async fn handle(&mut self, message: Message);
+    async fn handle_awaits(&mut self);
 }
 
 pub struct Handler<'a, R, T>
@@ -189,6 +190,10 @@ where
             Message::Empty => {}
         }
     }
+
+    async fn handle_awaits(&mut self) {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -203,6 +208,22 @@ mod test {
         let mut handler = Handler::new(repo, &transport);
         let msg = transport.receive_message().await.unwrap();
         handler.handle(msg).await;
+        println!("{:#?}", handler.repository);
+
+        let paper_answer = ReceivedMessage{
+            chat_id: "79146795555@c.us".to_string(),
+            customer_name: "Andrey".to_string(),
+            message: "1".to_string(),
+        };
+        handler.handle_text_message(paper_answer).await;
+        println!("{:#?}", handler.repository);
+
+        let size_answer = ReceivedMessage{
+            chat_id: "79146795555@c.us".to_string(),
+            customer_name: "Andrey".to_string(),
+            message: "1".to_string(),
+        };
+        handler.handle_text_message(size_answer).await;
         println!("{:#?}", handler.repository);
     }
 }

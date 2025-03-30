@@ -24,6 +24,7 @@ where
         loop {
             let msg = self.transport.receive_message().await?;
             self.handler.handle(msg).await;
+            self.handler.handle_awaits().await;
         }
     }
 }

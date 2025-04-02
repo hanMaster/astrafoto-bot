@@ -20,7 +20,7 @@ where
     }
 
     pub async fn start_polling(&mut self) -> Result<()> {
-        println!("Poller::start_polling");
+        println!("Start polling...");
         loop {
             let msg = self.transport.receive_message().await?;
             self.handler.handle(msg).await?;

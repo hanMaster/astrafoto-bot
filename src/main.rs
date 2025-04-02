@@ -4,7 +4,6 @@ use crate::stuff::poller::Poller;
 use crate::stuff::repository::OrderRepository;
 use crate::stuff::transport::WhatsApp;
 
-mod bot;
 mod config;
 mod error;
 mod stuff;

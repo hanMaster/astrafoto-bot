@@ -23,8 +23,8 @@ where
         println!("Poller::start_polling");
         loop {
             let msg = self.transport.receive_message().await?;
-            self.handler.handle(msg).await;
-            self.handler.handle_awaits().await;
+            self.handler.handle(msg).await?;
+            self.handler.handle_awaits().await?;
         }
     }
 }

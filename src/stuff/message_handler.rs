@@ -4,11 +4,10 @@ use crate::stuff::error::{Error, Result};
 use crate::stuff::prompt::Prompt;
 use crate::stuff::repository::Repository;
 use crate::stuff::transport::Transport;
-use std::sync::RwLock;
 
 pub trait MessageHandler {
-    async fn handle(&mut self, message: Message);
-    async fn handle_awaits(&mut self);
+    async fn handle(&mut self, message: Message) -> Result<()>;
+    async fn handle_awaits(&mut self) -> Result<()>;
 }
 
 pub struct Handler<'a, R, T>
@@ -16,7 +15,7 @@ where
     R: Repository,
     T: Transport,
 {
-    repository: RwLock<R>,
+    repository: R,
     transport: &'a T,
     prompt: Prompt,
 }
@@ -28,15 +27,15 @@ where
 {
     pub fn new(repository: R, transport: &'a T) -> Self {
         Self {
-            repository: RwLock::new(repository),
+            repository,
             transport,
             prompt: Prompt::new(),
         }
     }
 
-    async fn handle_image_message(&mut self, message: ReceivedMessage) {
+    async fn handle_image_message(&mut self, message: ReceivedMessage) -> Result<()> {
         let chat_id = message.chat_id.clone();
-        let order_option = self.repository.read().unwrap().get_order(&message.chat_id);
+        let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
             match order {
                 OrderState::RaperRequested { .. } => {
@@ -51,27 +50,25 @@ where
             }
             let mut updated = order.clone();
             updated.add_image(message.message);
-            self.repository.write().unwrap().set_order(updated);
+            self.repository.set_order(updated);
             println!("Order updated in repo {:#?}", self.repository);
         } else {
-            self.repository
-                .write()
-                .unwrap()
-                .set_order(OrderState::from_img_msg(message));
+            self.repository.set_order(OrderState::from_img_msg(message));
             println!("Order created in repo {:#?}", self.repository);
             self.send_paper_request(chat_id).await;
         }
+        Ok(())
     }
 
-    async fn handle_text_message(&mut self, message: ReceivedMessage) {
+    async fn handle_text_message(&mut self, message: ReceivedMessage) -> Result<()> {
         let chat_id = message.chat_id.clone();
-        let order_option = self.repository.read().unwrap().get_order(&message.chat_id);
+        let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
             // Клиент пожелал отменить заказ
             if message.message.to_lowercase().contains("отмен") {
-                let _ = self.repository.write().unwrap().delete_order(&chat_id);
+                self.repository.delete_order(&chat_id)?;
                 self.send_cancel(chat_id).await;
-                return;
+                return Ok(());
             }
 
             match order {
@@ -103,7 +100,7 @@ where
                 OrderState::SizeSelected { .. } => {
                     if message.message.to_lowercase().contains("готов") && order.have_files() {
                         self.transport.send_order(order).await;
-                        let _ = self.repository.write().unwrap().delete_order(&chat_id);
+                        self.repository.delete_order(&chat_id)?;
                         self.send_final_request(chat_id).await;
                     } else {
                         self.send_ready_request(chat_id).await;
@@ -112,13 +109,11 @@ where
             }
             println!("Order updated {:#?}", self.repository);
         } else {
-            self.repository
-                .write()
-                .unwrap()
-                .set_order(OrderState::from_txt_msg(message));
+            self.repository.set_order(OrderState::from_txt_msg(message));
             println!("Order created {:#?}", self.repository);
             self.send_paper_request(chat_id).await;
         }
+        Ok(())
     }
 
     fn try_set_paper(&mut self, o: OrderState, message: ReceivedMessage) -> Result<String> {
@@ -128,7 +123,7 @@ where
             None => Err(Error::PaperInvalid),
             Some(paper) => {
                 let new_state = o.into_order_with_paper(paper.clone())?;
-                self.repository.write().unwrap().set_order(new_state);
+                self.repository.set_order(new_state);
                 Ok(paper)
             }
         }
@@ -142,7 +137,7 @@ where
             None => Err(Error::SizeInvalid(paper)),
             Some(size) => {
                 let new_state = o.into_order_with_size(size)?;
-                self.repository.write().unwrap().set_order(new_state);
+                self.repository.set_order(new_state);
                 Ok(())
             }
         }
@@ -204,22 +199,23 @@ where
     R: Repository + std::fmt::Debug,
     T: Transport,
 {
-    async fn handle(&mut self, message: Message) {
+    async fn handle(&mut self, message: Message) -> Result<()> {
         match message {
             Message::Text(msg) => {
-                self.handle_text_message(msg).await;
+                self.handle_text_message(msg).await?;
             }
             Message::Image(msg) => {
-                self.handle_image_message(msg).await;
+                self.handle_image_message(msg).await?;
             }
             Message::Empty => {}
         }
+        Ok(())
     }
 
-    async fn handle_awaits(&mut self) {
-        let mut repo_guard = self.repository.write().unwrap();
+    async fn handle_awaits(&mut self) -> Result<()> {
+        let orders = self.repository.get_orders();
         let mut orders_to_remove = vec![];
-        for (_, o) in repo_guard.get_orders() {
+        for (_, o) in orders {
             match o {
                 OrderState::RaperRequested {
                     ref chat_id,
@@ -239,10 +235,13 @@ where
                         {
                             let mut clonned = o.clone();
                             clonned.requested();
-                            println!("Repeat timeout after requested {:?}", clonned);
-                            repo_guard.set_order(clonned);
-                            println!("Repeat timeout after repo");
+                            self.repository.set_order(clonned);
                             self.send_paper_request(chat_id.clone()).await;
+                        } else if repeats < config().REPEAT_COUNT
+                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
+                        {
+                        } else {
+                            orders_to_remove.push(chat_id.clone());
                         }
                     }
                 },
@@ -263,10 +262,15 @@ where
                         if repeats < config().REPEAT_COUNT
                             && last_msg_time.elapsed().unwrap().as_secs() > config().REPEAT_TIMEOUT
                         {
-                            self.send_size_request(chat_id.clone(), &paper).await;
+                            self.send_size_request(chat_id.clone(), paper).await;
                             let mut clonned = o.clone();
                             clonned.requested();
-                            repo_guard.set_order(clonned);
+                            self.repository.set_order(clonned);
+                        } else if repeats < config().REPEAT_COUNT
+                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
+                        {
+                        } else {
+                            orders_to_remove.push(chat_id.clone());
                         }
                     }
                 },
@@ -289,12 +293,27 @@ where
                             self.send_ready_request(chat_id.clone()).await;
                             let mut clonned = o.clone();
                             clonned.requested();
-                            repo_guard.set_order(clonned);
+                            self.repository.set_order(clonned);
+                        } else if repeats < config().REPEAT_COUNT
+                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
+                        {
+                        } else {
+                            orders_to_remove.push(chat_id.clone());
                         }
                     }
                 },
             };
         }
+        for chat_id in orders_to_remove {
+            self.repository.delete_order(&chat_id)?;
+            self.transport
+                .send_message(
+                    chat_id.clone(),
+                    "Заказ отменен, из-за длительного ожидания".to_string(),
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 
@@ -308,8 +327,10 @@ mod test {
         let repo = OrderRepository::new();
         let transport = MockTransport;
         let mut handler = Handler::new(repo, &transport);
+
         let msg = transport.receive_message().await.unwrap();
-        handler.handle(msg).await;
+        let res = handler.handle(msg).await;
+        assert!(res.is_ok());
         println!("{:#?}", handler.repository);
 
         let paper_answer = ReceivedMessage {
@@ -317,7 +338,8 @@ mod test {
             customer_name: "Andrey".to_string(),
             message: "1".to_string(),
         };
-        handler.handle_text_message(paper_answer).await;
+        let res = handler.handle_text_message(paper_answer).await;
+        assert!(res.is_ok());
         println!("{:#?}", handler.repository);
 
         let size_answer = ReceivedMessage {
@@ -325,7 +347,8 @@ mod test {
             customer_name: "Andrey".to_string(),
             message: "1".to_string(),
         };
-        handler.handle_text_message(size_answer).await;
+        let res = handler.handle_text_message(size_answer).await;
+        assert!(res.is_ok());
         println!("{:#?}", handler.repository);
 
         let size_answer = ReceivedMessage {
@@ -333,7 +356,8 @@ mod test {
             customer_name: "Andrey".to_string(),
             message: "Отмените".to_string(),
         };
-        handler.handle_text_message(size_answer).await;
+        let res = handler.handle_text_message(size_answer).await;
+        assert!(res.is_ok());
         println!("{:#?}", handler.repository);
     }
 }

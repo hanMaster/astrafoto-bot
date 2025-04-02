@@ -91,6 +91,7 @@ where
                             self.send_ready_request(chat_id.clone()).await;
                         }
                         Err(Error::SizeInvalid(paper)) => {
+                            println!("Paper size invalid: {:?}", paper);
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         _ => {}
@@ -118,7 +119,8 @@ where
 
     fn try_set_paper(&mut self, o: OrderState, message: ReceivedMessage) -> Result<String> {
         let paper_type: usize = message.message.parse()?;
-        let paper_opt = self.prompt.try_get_paper(paper_type);
+        let paper_opt = self.prompt.try_get_paper(paper_type - 1);
+        println!("paper_opt {:?}", paper_opt);
         match paper_opt {
             None => Err(Error::PaperInvalid),
             Some(paper) => {
@@ -132,7 +134,8 @@ where
     fn try_set_size(&mut self, o: OrderState, message: ReceivedMessage) -> Result<()> {
         let size_type: usize = message.message.parse()?;
         let paper = o.get_paper().to_string();
-        let size_opt = self.prompt.try_get_size(o.get_paper(), size_type);
+        let size_opt = self.prompt.try_get_size(o.get_paper(), size_type - 1);
+        println!("size_opt {:?}", size_opt);
         match size_opt {
             None => Err(Error::SizeInvalid(paper)),
             Some(size) => {

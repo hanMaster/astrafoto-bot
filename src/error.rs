@@ -7,6 +7,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum Error {
     // -- Config
     ConfigMissingEnv(&'static str),
+    ConfigWrongFormat(&'static str),
     App(stuff::error::Error)
 }
 

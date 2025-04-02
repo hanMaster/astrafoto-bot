@@ -4,6 +4,7 @@ use crate::stuff::error::{Error, Result};
 
 pub trait Repository {
     fn get_order(&self, chat_id: &str) -> Option<OrderState>;
+    fn get_orders(&self) -> HashMap<String, OrderState>;
     fn set_order(&mut self, state: OrderState);
     fn delete_order(&mut self, chat_id: &str) -> Result<()>;
 }
@@ -24,6 +25,10 @@ impl OrderRepository {
 impl Repository for OrderRepository {
     fn get_order(&self, chat_id: &str) -> Option<OrderState> {
         self.orders.get(chat_id).cloned()
+    }
+
+    fn get_orders(&self) -> HashMap<String, OrderState> {
+        self.orders.clone()
     }
 
     fn set_order(&mut self, state: OrderState) {
@@ -49,6 +54,7 @@ impl Repository for OrderRepository {
 
 #[cfg(test)]
 mod tests {
+    use std::time::SystemTime;
     use super::*;
     #[test]
     fn repo_update_order() {
@@ -57,6 +63,8 @@ mod tests {
             chat_id: "79146795551".to_string(),
             customer_name: "John".to_string(),
             files: vec![],
+            repeats: 0,
+            last_msg_time: SystemTime::now(),
         };
         repo.set_order(order);
         println!("Order update result: {:?}", repo);
@@ -66,6 +74,8 @@ mod tests {
             customer_name: "Jane".to_string(),
             paper: "paper".to_string(),
             files: vec![],
+            repeats: 0,
+            last_msg_time: SystemTime::now(),
         };
         repo.set_order(order.clone());
 

@@ -1,6 +1,7 @@
 use crate::stuff::error::{Error, Result};
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
+use std::time::SystemTime;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -22,12 +23,16 @@ pub enum OrderState {
         chat_id: String,
         customer_name: String,
         files: Vec<String>,
+        repeats: i32,
+        last_msg_time: SystemTime,
     },
     SizeRequested {
         chat_id: String,
         customer_name: String,
         paper: String,
         files: Vec<String>,
+        repeats: i32,
+        last_msg_time: SystemTime,
     },
     SizeSelected {
         chat_id: String,
@@ -35,6 +40,8 @@ pub enum OrderState {
         paper: String,
         size: String,
         files: Vec<String>,
+        repeats: i32,
+        last_msg_time: SystemTime,
     },
 }
 
@@ -44,6 +51,8 @@ impl OrderState {
             chat_id: msg.chat_id,
             customer_name: msg.customer_name,
             files: vec![msg.message],
+            repeats: 0,
+            last_msg_time: SystemTime::now(),
         }
     }
     pub fn from_txt_msg(msg: ReceivedMessage) -> OrderState {
@@ -51,6 +60,8 @@ impl OrderState {
             chat_id: msg.chat_id,
             customer_name: msg.customer_name,
             files: vec![],
+            repeats: 0,
+            last_msg_time: SystemTime::now(),
         }
     }
     pub fn get_chat_id(&self) -> String {
@@ -100,11 +111,14 @@ impl OrderState {
                 chat_id,
                 customer_name,
                 files,
+                ..
             } => Ok(OrderState::SizeRequested {
                 chat_id,
                 customer_name,
                 paper,
                 files,
+                repeats: 0,
+                last_msg_time: SystemTime::now(),
             }),
             OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
@@ -126,8 +140,39 @@ impl OrderState {
                 paper,
                 size,
                 files,
+                repeats: 0,
+                last_msg_time: SystemTime::now(),
             }),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
+        }
+    }
+
+    pub fn requested(&mut self) {
+        match self {
+            OrderState::RaperRequested {
+                repeats,
+                last_msg_time,
+                ..
+            } => {
+                *repeats += 1;
+                *last_msg_time = SystemTime::now();
+            }
+            OrderState::SizeRequested {
+                repeats,
+                last_msg_time,
+                ..
+            } => {
+                *repeats += 1;
+                *last_msg_time = SystemTime::now();
+            }
+            OrderState::SizeSelected {
+                repeats,
+                last_msg_time,
+                ..
+            } => {
+                *repeats += 1;
+                *last_msg_time = SystemTime::now();
+            }
         }
     }
 }
@@ -184,6 +229,7 @@ impl From<OrderState> for OrderMessage {
                 paper,
                 size,
                 files,
+                ..
             } => {
                 let phone = chat_id.split('@').collect::<Vec<&str>>()[0];
                 Self {

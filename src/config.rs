@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::error::Result;
 use dotenvy::dotenv;
 use std::env;
+use std::str::FromStr;
 use std::sync::OnceLock;
 
 pub fn config() -> &'static Config {
@@ -24,6 +25,9 @@ pub struct Config {
     pub WORKER_URL: String,
     pub SHOP_ADDRESS: String,
     pub SHOP_PHONE: String,
+    pub NO_FILES_TIMEOUT: u64,
+    pub REPEAT_COUNT: i32,
+    pub REPEAT_TIMEOUT: u64,
 }
 
 impl Config {
@@ -37,10 +41,18 @@ impl Config {
             WORKER_URL: get_env("WORKER_URL")?,
             SHOP_ADDRESS: get_env("SHOP_ADDRESS")?,
             SHOP_PHONE: get_env("SHOP_PHONE")?,
+            NO_FILES_TIMEOUT: get_env_as_parse("NO_FILES_TIMEOUT")?,
+            REPEAT_COUNT: get_env_as_parse("REPEAT_COUNT")?,
+            REPEAT_TIMEOUT: get_env_as_parse("REPEAT_TIMEOUT")?,
         })
     }
 }
 
 fn get_env(name: &'static str) -> Result<String> {
     env::var(name).map_err(|_| Error::ConfigMissingEnv(name))
+}
+
+fn get_env_as_parse<T: FromStr>(name: &'static str) -> Result<T> {
+    let val = get_env(name)?;
+    val.parse::<T>().map_err(|_| Error::ConfigWrongFormat(name))
 }

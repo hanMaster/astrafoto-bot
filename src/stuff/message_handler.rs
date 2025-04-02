@@ -219,93 +219,38 @@ where
         let orders = self.repository.get_orders();
         let mut orders_to_remove = vec![];
         for (_, o) in orders {
-            match o {
-                OrderState::RaperRequested {
-                    ref chat_id,
-                    ref files,
-                    repeats,
-                    last_msg_time,
-                    ..
-                } => match files.is_empty() {
-                    true => {
-                        if last_msg_time.elapsed().unwrap().as_secs() > config().NO_FILES_TIMEOUT {
-                            orders_to_remove.push(chat_id.clone());
+            match o.have_files() {
+                true => {
+                    if o.repeats() < config().REPEAT_COUNT
+                        && o.last_time_sec() > config().REPEAT_TIMEOUT
+                    {
+                        let mut clonned = o.clone();
+                        clonned.requested();
+                        self.repository.set_order(clonned);
+                        match o {
+                            OrderState::RaperRequested { .. } => {
+                                self.send_paper_request(o.get_chat_id()).await;
+                            }
+                            OrderState::SizeRequested { .. } => {
+                                self.send_size_request(o.get_chat_id(), o.get_paper()).await;
+                            }
+                            OrderState::SizeSelected { .. } => {
+                                self.send_ready_request(o.get_chat_id()).await;
+                            }
                         }
+                    } else if o.repeats() < config().REPEAT_COUNT
+                        && o.last_time_sec() < config().REPEAT_TIMEOUT
+                    {
+                    } else {
+                        orders_to_remove.push(o.get_chat_id());
                     }
-                    false => {
-                        if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() > config().REPEAT_TIMEOUT
-                        {
-                            let mut clonned = o.clone();
-                            clonned.requested();
-                            self.repository.set_order(clonned);
-                            self.send_paper_request(chat_id.clone()).await;
-                        } else if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
-                        {
-                        } else {
-                            orders_to_remove.push(chat_id.clone());
-                        }
+                }
+                false => {
+                    if o.last_time_sec() > config().NO_FILES_TIMEOUT {
+                        orders_to_remove.push(o.get_chat_id());
                     }
-                },
-                OrderState::SizeRequested {
-                    ref chat_id,
-                    ref paper,
-                    ref files,
-                    repeats,
-                    last_msg_time,
-                    ..
-                } => match files.is_empty() {
-                    true => {
-                        if last_msg_time.elapsed().unwrap().as_secs() > config().NO_FILES_TIMEOUT {
-                            orders_to_remove.push(chat_id.clone());
-                        }
-                    }
-                    false => {
-                        if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() > config().REPEAT_TIMEOUT
-                        {
-                            self.send_size_request(chat_id.clone(), paper).await;
-                            let mut clonned = o.clone();
-                            clonned.requested();
-                            self.repository.set_order(clonned);
-                        } else if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
-                        {
-                        } else {
-                            orders_to_remove.push(chat_id.clone());
-                        }
-                    }
-                },
-                OrderState::SizeSelected {
-                    ref chat_id,
-                    ref files,
-                    repeats,
-                    last_msg_time,
-                    ..
-                } => match files.is_empty() {
-                    true => {
-                        if last_msg_time.elapsed().unwrap().as_secs() > config().NO_FILES_TIMEOUT {
-                            orders_to_remove.push(chat_id.clone());
-                        }
-                    }
-                    false => {
-                        if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() > config().REPEAT_TIMEOUT
-                        {
-                            self.send_ready_request(chat_id.clone()).await;
-                            let mut clonned = o.clone();
-                            clonned.requested();
-                            self.repository.set_order(clonned);
-                        } else if repeats < config().REPEAT_COUNT
-                            && last_msg_time.elapsed().unwrap().as_secs() < config().REPEAT_TIMEOUT
-                        {
-                        } else {
-                            orders_to_remove.push(chat_id.clone());
-                        }
-                    }
-                },
-            };
+                }
+            }
         }
         for chat_id in orders_to_remove {
             self.repository.delete_order(&chat_id)?;

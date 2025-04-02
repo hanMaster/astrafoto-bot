@@ -55,6 +55,7 @@ impl OrderState {
             last_msg_time: SystemTime::now(),
         }
     }
+
     pub fn from_txt_msg(msg: ReceivedMessage) -> OrderState {
         OrderState::RaperRequested {
             chat_id: msg.chat_id,
@@ -64,6 +65,7 @@ impl OrderState {
             last_msg_time: SystemTime::now(),
         }
     }
+
     pub fn get_chat_id(&self) -> String {
         match self {
             OrderState::RaperRequested { chat_id, .. } => chat_id.to_string(),
@@ -71,11 +73,34 @@ impl OrderState {
             OrderState::SizeSelected { chat_id, .. } => chat_id.to_string(),
         }
     }
+
     pub fn get_paper(&self) -> &str {
         match self {
             OrderState::RaperRequested { .. } => "",
             OrderState::SizeRequested { paper, .. } => paper,
             OrderState::SizeSelected { .. } => "",
+        }
+    }
+
+    pub fn last_time_sec(&self) -> u64 {
+        match self {
+            OrderState::RaperRequested { last_msg_time, .. } => {
+                last_msg_time.elapsed().unwrap().as_secs()
+            }
+            OrderState::SizeRequested { last_msg_time, .. } => {
+                last_msg_time.elapsed().unwrap().as_secs()
+            }
+            OrderState::SizeSelected { last_msg_time, .. } => {
+                last_msg_time.elapsed().unwrap().as_secs()
+            }
+        }
+    }
+
+    pub fn repeats(&self) -> i32 {
+        match self {
+            OrderState::RaperRequested { repeats, .. } => *repeats,
+            OrderState::SizeRequested { repeats, .. } => *repeats,
+            OrderState::SizeSelected { repeats, .. } => *repeats,
         }
     }
 
@@ -95,12 +120,8 @@ impl OrderState {
 
     pub fn have_files(&self) -> bool {
         match self {
-            OrderState::RaperRequested { .. } => {
-                unreachable!()
-            }
-            OrderState::SizeRequested { .. } => {
-                unreachable!()
-            }
+            OrderState::RaperRequested { files, .. } => !files.is_empty(),
+            OrderState::SizeRequested { files, .. } => !files.is_empty(),
             OrderState::SizeSelected { files, .. } => !files.is_empty(),
         }
     }

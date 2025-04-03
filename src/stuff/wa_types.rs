@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::time::SystemTime;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextMessageData {
@@ -81,75 +79,9 @@ pub struct FileMessageData {
     pub is_forwarded: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SendMessage {
     #[serde(rename = "chatId")]
     pub chat_id: String,
     pub message: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Order {
-    pub chat_id: String,
-    pub customer_name: String,
-    pub paper: String,
-    pub size: String,
-    pub images: Vec<String>,
-    pub state: &'static str,
-    pub last_update_time: SystemTime,
-    pub iter_count: i32,
-}
-
-impl Default for Order {
-    fn default() -> Self {
-        Order::new()
-    }
-}
-
-impl Display for Order {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let phone = self.chat_id.split('@').collect::<Vec<&str>>()[0];
-        write!(
-            f,
-            "Телефон: {phone}\nИмя: {}\nТип бумаги: {}\nРазмер: {}\nФайлы: {:?}",
-            self.customer_name, self.paper, self.size, self.images
-        )
-    }
-}
-
-impl Order {
-    pub fn new() -> Self {
-        Self {
-            chat_id: "".to_string(),
-            customer_name: "".to_string(),
-            paper: "".to_string(),
-            size: "".to_string(),
-            images: vec![],
-            state: "new",
-            last_update_time: SystemTime::now(),
-            iter_count: 0,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct OrderMessage {
-    pub phone: String,
-    pub name: String,
-    pub paper_type: String,
-    pub paper_size: String,
-    pub files: Vec<String>,
-}
-
-impl From<Order> for OrderMessage {
-    fn from(order: Order) -> Self {
-        let phone = order.chat_id.split('@').collect::<Vec<&str>>()[0];
-        Self {
-            phone: phone.to_string(),
-            name: order.customer_name,
-            paper_type: order.paper,
-            paper_size: order.size,
-            files: order.images,
-        }
-    }
 }

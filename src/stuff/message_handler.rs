@@ -34,20 +34,8 @@ where
     }
 
     async fn handle_image_message(&mut self, message: ReceivedMessage) -> Result<()> {
-        let chat_id = message.chat_id.clone();
         let order_option = self.repository.get_order(&message.chat_id);
         if let Some(order) = order_option {
-            match order {
-                OrderState::RaperRequested { .. } => {
-                    self.send_paper_request(chat_id).await;
-                }
-                OrderState::SizeRequested { .. } => {
-                    self.send_size_request(chat_id, order.get_paper()).await;
-                }
-                OrderState::SizeSelected { .. } => {
-                    self.send_ready_request(chat_id).await;
-                }
-            }
             let mut updated = order.clone();
             updated.add_image(message.message);
             self.repository.set_order(updated);
@@ -55,7 +43,6 @@ where
         } else {
             self.repository.set_order(OrderState::from_img_msg(message));
             println!("Order created in repo {:#?}", self.repository);
-            self.send_paper_request(chat_id).await;
         }
         Ok(())
     }

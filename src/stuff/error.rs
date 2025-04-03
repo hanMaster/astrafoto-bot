@@ -13,6 +13,7 @@ pub enum Error {
     SizeInvalid(String),
     OrderWrongState,
     ParseFailed(ParseIntError),
+    OrderFailed(String)
 }
 
 // region:    ---From

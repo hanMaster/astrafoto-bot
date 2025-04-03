@@ -39,6 +39,7 @@ pub enum OrderState {
         customer_name: String,
         paper: String,
         size: String,
+        price: i32,
         files: Vec<String>,
         repeats: i32,
         last_msg_time: SystemTime,
@@ -146,7 +147,7 @@ impl OrderState {
         }
     }
 
-    pub fn into_order_with_size(self, size: String) -> Result<OrderState> {
+    pub fn into_order_with_size(self, size: String, price: i32) -> Result<OrderState> {
         match self {
             OrderState::RaperRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeRequested {
@@ -160,6 +161,7 @@ impl OrderState {
                 customer_name,
                 paper,
                 size,
+                price,
                 files,
                 repeats: 0,
                 last_msg_time: SystemTime::now(),
@@ -232,6 +234,7 @@ pub struct OrderMessage {
     pub name: String,
     pub paper_type: String,
     pub paper_size: String,
+    pub price: i32,
     pub files: Vec<String>,
 }
 
@@ -249,6 +252,7 @@ impl From<OrderState> for OrderMessage {
                 customer_name,
                 paper,
                 size,
+                price,
                 files,
                 ..
             } => {
@@ -258,6 +262,7 @@ impl From<OrderState> for OrderMessage {
                     name: customer_name,
                     paper_type: paper,
                     paper_size: size,
+                    price,
                     files,
                 }
             }

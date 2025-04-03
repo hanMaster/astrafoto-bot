@@ -1,13 +1,13 @@
 use crate::config::config;
-use crate::stuff::wa_types::{RootMsg, SendMessage};
 use crate::stuff::data_types::{Message, OrderMessage, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
+use crate::stuff::wa_types::{RootMsg, SendMessage};
 use reqwest::StatusCode;
 pub trait Transport {
     async fn receive_message(&self) -> Result<Message>;
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
 
-    async fn send_order(&self, order: OrderState);
+    async fn send_order(&self, order: OrderState)->Result<()>;
 }
 
 pub struct WhatsApp {
@@ -112,7 +112,7 @@ impl Transport for WhatsApp {
         Ok(())
     }
 
-    async fn send_order(&self, order: OrderState) {
+    async fn send_order(&self, order: OrderState)-> Result<()> {
         let send_result = reqwest::Client::new()
             .post(&self.worker_url)
             .json::<OrderMessage>(&order.clone().into())
@@ -120,16 +120,21 @@ impl Transport for WhatsApp {
             .await;
         match send_result {
             Ok(response) => {
-                println!(
-                    "Order sent successfully! Response: {}",
-                    response.text().await.unwrap()
-                );
-                self.log_to_admin(format!("Заказ {}", order)).await;
+                let text = response.text().await?;
+                if text != "Order saved!" {
+                    self.log_to_admin(text.clone()).await;
+                    Err(Error::OrderFailed(text))
+                } else {
+                    println!("Order sent successfully! Response: {}", text);
+                    self.log_to_admin(format!("Заказ {}", order)).await;
+                    Ok(())
+                }
             }
             Err(e) => {
                 let msg = format!("Failed to send order to worker! Error: {}", e);
                 eprintln!("{msg}");
                 self.log_to_admin(msg).await;
+                Err(Error::Request(e))
             }
         }
     }
@@ -152,7 +157,8 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn send_order(&self, order: OrderState) {
+    async fn send_order(&self, order: OrderState) -> Result<()> {
         println!("Sending order to: {:?}", &order);
+        Ok(())
     }
 }

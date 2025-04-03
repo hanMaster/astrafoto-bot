@@ -22,12 +22,12 @@ impl Prompt {
         }
     }
 
-    pub fn try_get_size(&self, paper: &str, idx: usize) -> Option<String> {
+    pub fn try_get_size(&self, paper: &str, idx: usize) -> Option<(String, i32)> {
         let sizes = self.paper.sizes_by_paper(paper);
         if idx >= sizes.len() {
             None
         } else {
-            Some(format!("{}-{}руб", sizes[idx].size, sizes[idx].price))
+            Some((sizes[idx].size.clone(), sizes[idx].price))
         }
     }
 

@@ -100,9 +100,16 @@ where
 
                 OrderState::SizeSelected { .. } => {
                     if message.message.to_lowercase().contains("готов") && order.have_files() {
-                        self.transport.send_order(order).await;
+                        let res = self.transport.send_order(order).await;
                         self.repository.delete_order(&chat_id)?;
-                        self.send_final_request(chat_id).await;
+                        match res {
+                            Ok(_) => {
+                                self.send_final_request(chat_id).await;
+                            }
+                            Err(_) => {
+                                self.send_error_request(chat_id).await;
+                            }
+                        }
                     } else {
                         self.send_ready_request(chat_id).await;
                     }
@@ -138,8 +145,8 @@ where
         println!("size_opt {:?}", size_opt);
         match size_opt {
             None => Err(Error::SizeInvalid(paper)),
-            Some(size) => {
-                let new_state = o.into_order_with_size(size)?;
+            Some((size, price)) => {
+                let new_state = o.into_order_with_size(size, price)?;
                 self.repository.set_order(new_state);
                 Ok(())
             }
@@ -180,6 +187,19 @@ where
         let res = self
             .transport
             .send_message(chat_id, self.prompt.final_prompt())
+            .await;
+        if let Err(e) = res {
+            eprintln!("Error sending final request: {}", e);
+        };
+    }
+
+    async fn send_error_request(&self, chat_id: String) {
+        let res = self
+            .transport
+            .send_message(
+                chat_id,
+                "Не удалось отправить Ваш заказ, попробуйте еще раз".to_string(),
+            )
             .await;
         if let Err(e) = res {
             eprintln!("Error sending final request: {}", e);

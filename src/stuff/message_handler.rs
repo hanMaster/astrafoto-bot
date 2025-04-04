@@ -1,3 +1,4 @@
+use log::{error, info};
 use crate::config::config;
 use crate::stuff::data_types::{Message, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
@@ -39,10 +40,10 @@ where
             let mut updated = order.clone();
             updated.add_image(message.message);
             self.repository.set_order(updated);
-            println!("Order updated in repo {:#?}", self.repository);
+            info!("Order updated in repo {:#?}", self.repository);
         } else {
             self.repository.set_order(OrderState::from_img_msg(message));
-            println!("Order created in repo {:#?}", self.repository);
+            info!("Order created in repo {:#?}", self.repository);
         }
         Ok(())
     }
@@ -78,7 +79,7 @@ where
                             self.send_ready_request(chat_id.clone()).await;
                         }
                         Err(Error::SizeInvalid(paper)) => {
-                            println!("Paper size invalid: {:?}", paper);
+                            error!("Paper size invalid: {:?}", paper);
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         _ => {}
@@ -102,10 +103,10 @@ where
                     }
                 }
             }
-            println!("Order updated {:#?}", self.repository);
+            info!("Order updated {:#?}", self.repository);
         } else {
             self.repository.set_order(OrderState::from_txt_msg(message));
-            println!("Order created {:#?}", self.repository);
+            info!("Order created {:#?}", self.repository);
             self.send_paper_request(chat_id).await;
         }
         Ok(())
@@ -114,7 +115,7 @@ where
     fn try_set_paper(&mut self, o: OrderState, message: ReceivedMessage) -> Result<String> {
         let paper_type: usize = message.message.parse()?;
         let paper_opt = self.prompt.try_get_paper(paper_type - 1);
-        println!("paper_opt {:?}", paper_opt);
+        info!("paper_opt {:?}", paper_opt);
         match paper_opt {
             None => Err(Error::PaperInvalid),
             Some(paper) => {
@@ -129,7 +130,7 @@ where
         let size_type: usize = message.message.parse()?;
         let paper = o.get_paper().to_string();
         let size_opt = self.prompt.try_get_size(o.get_paper(), size_type - 1);
-        println!("size_opt {:?}", size_opt);
+        info!("size_opt {:?}", size_opt);
         match size_opt {
             None => Err(Error::SizeInvalid(paper)),
             Some((size, price)) => {
@@ -146,7 +147,7 @@ where
             .send_message(chat_id, self.prompt.paper_prompt())
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending paper request: {}", e);
+            error!("Error sending paper request: {}", e);
         };
     }
 
@@ -156,7 +157,7 @@ where
             .send_message(chat_id, self.prompt.size_prompt(paper))
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending size request: {}", e);
+            error!("Error sending size request: {}", e);
         };
     }
 
@@ -166,7 +167,7 @@ where
             .send_message(chat_id, self.prompt.ready_prompt())
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending ready request: {}", e);
+            error!("Error sending ready request: {}", e);
         };
     }
 
@@ -176,7 +177,7 @@ where
             .send_message(chat_id, self.prompt.final_prompt())
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending final request: {}", e);
+            error!("Error sending final request: {}", e);
         };
     }
 
@@ -189,7 +190,7 @@ where
             )
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending final request: {}", e);
+            error!("Error sending final request: {}", e);
         };
     }
 
@@ -199,7 +200,7 @@ where
             .send_message(chat_id, "Ваш заказ отменен".to_string())
             .await;
         if let Err(e) = res {
-            eprintln!("Error sending final request: {}", e);
+            error!("Error sending final request: {}", e);
         };
     }
 }

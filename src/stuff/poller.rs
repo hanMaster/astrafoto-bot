@@ -1,3 +1,4 @@
+use log::info;
 use crate::stuff::error::Result;
 use crate::stuff::message_handler::MessageHandler;
 use crate::stuff::transport::Transport;
@@ -20,7 +21,7 @@ where
     }
 
     pub async fn start_polling(&mut self) -> Result<()> {
-        println!("Start polling...");
+        info!("Start polling...");
         loop {
             let msg = self.transport.receive_message().await?;
             self.handler.handle(msg).await?;

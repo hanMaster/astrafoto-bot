@@ -107,14 +107,29 @@ impl OrderState {
 
     pub fn add_image(&mut self, url: String) {
         match self {
-            OrderState::RaperRequested { files, .. } => {
+            OrderState::RaperRequested {
+                files,
+                last_msg_time,
+                ..
+            } => {
                 files.push(url);
+                *last_msg_time = SystemTime::now();
             }
-            OrderState::SizeRequested { files, .. } => {
+            OrderState::SizeRequested {
+                files,
+                last_msg_time,
+                ..
+            } => {
                 files.push(url);
+                *last_msg_time = SystemTime::now();
             }
-            OrderState::SizeSelected { files, .. } => {
+            OrderState::SizeSelected {
+                files,
+                last_msg_time,
+                ..
+            } => {
                 files.push(url);
+                *last_msg_time = SystemTime::now();
             }
         }
     }

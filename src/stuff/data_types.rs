@@ -142,6 +142,14 @@ impl OrderState {
         }
     }
 
+    pub fn files_count(&self) -> usize {
+        match self {
+            OrderState::RaperRequested { files, .. } => files.len(),
+            OrderState::SizeRequested { files, .. } => files.len(),
+            OrderState::SizeSelected { files, .. } => files.len(),
+        }
+    }
+
     pub fn into_order_with_paper(self, paper: String) -> Result<OrderState> {
         match self {
             OrderState::RaperRequested {

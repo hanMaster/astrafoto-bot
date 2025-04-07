@@ -1,10 +1,10 @@
-use log::{error, info};
 use crate::config::config;
 use crate::stuff::data_types::{Message, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
 use crate::stuff::prompt::Prompt;
 use crate::stuff::repository::Repository;
 use crate::stuff::transport::Transport;
+use log::{error, info};
 
 pub trait MessageHandler {
     async fn handle(&mut self, message: Message) -> Result<()>;
@@ -39,10 +39,15 @@ where
         if let Some(order) = order_option {
             let mut updated = order.clone();
             updated.add_image(message.message);
+            self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
+                .await;
             self.repository.set_order(updated);
             info!("Order updated in repo {:#?}", self.repository);
         } else {
-            self.repository.set_order(OrderState::from_img_msg(message));
+            let new_order = OrderState::from_img_msg(message);
+            self.send_receive_file_confirmation(new_order.get_chat_id(), new_order.files_count())
+                .await;
+            self.repository.set_order(new_order);
             info!("Order created in repo {:#?}", self.repository);
         }
         Ok(())
@@ -139,6 +144,16 @@ where
                 Ok(())
             }
         }
+    }
+
+    async fn send_receive_file_confirmation(&self, chat_id: String, count: usize) {
+        let res = self
+            .transport
+            .send_message(chat_id, format!("От Вас получено файлов: {}", count))
+            .await;
+        if let Err(e) = res {
+            error!("Error sending paper request: {}", e);
+        };
     }
 
     async fn send_paper_request(&self, chat_id: String) {

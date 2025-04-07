@@ -1,14 +1,14 @@
-use log::{debug, error, info};
 use crate::config::config;
 use crate::stuff::data_types::{Message, OrderMessage, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
 use crate::stuff::wa_types::{RootMsg, SendMessage};
+use log::{debug, error};
 use reqwest::StatusCode;
 pub trait Transport {
     async fn receive_message(&self) -> Result<Message>;
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
 
-    async fn send_order(&self, order: OrderState)->Result<()>;
+    async fn send_order(&self, order: OrderState) -> Result<String>;
 }
 
 pub struct WhatsApp {
@@ -116,7 +116,7 @@ impl Transport for WhatsApp {
         Ok(())
     }
 
-    async fn send_order(&self, order: OrderState)-> Result<()> {
+    async fn send_order(&self, order: OrderState) -> Result<String> {
         let send_result = reqwest::Client::new()
             .post(&self.worker_url)
             .json::<OrderMessage>(&order.clone().into())
@@ -124,14 +124,14 @@ impl Transport for WhatsApp {
             .await;
         match send_result {
             Ok(response) => {
+                let status = response.status();
                 let text = response.text().await?;
-                if text != "Order saved!" {
+                if status == StatusCode::CREATED {
+                    Ok(text)
+                } else {
+                    error!("[send_order] {:?}", text);
                     self.log_to_admin(text.clone()).await;
                     Err(Error::OrderFailed(text))
-                } else {
-                    info!("Order sent successfully! Response: {}", text);
-                    self.log_to_admin(format!("Заказ {}", order)).await;
-                    Ok(())
                 }
             }
             Err(e) => {
@@ -161,8 +161,8 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn send_order(&self, order: OrderState) -> Result<()> {
+    async fn send_order(&self, order: OrderState) -> Result<String> {
         println!("Sending order to: {:?}", &order);
-        Ok(())
+        Ok("".to_string())
     }
 }

@@ -93,11 +93,13 @@ where
 
                 OrderState::SizeSelected { .. } => {
                     if message.message.to_lowercase().contains("готов") && order.have_files() {
+                        self.send_wait_request(chat_id.clone()).await;
                         let res = self.transport.send_order(order).await;
                         self.repository.delete_order(&chat_id)?;
                         match res {
-                            Ok(_) => {
-                                self.send_final_request(chat_id).await;
+                            Ok(order_id) => {
+                                info!("Order from {} DONE with id {}", chat_id, order_id);
+                                self.send_final_request(chat_id, order_id).await;
                             }
                             Err(_) => {
                                 self.send_error_request(chat_id).await;
@@ -186,10 +188,23 @@ where
         };
     }
 
-    async fn send_final_request(&self, chat_id: String) {
+    async fn send_wait_request(&self, chat_id: String) {
         let res = self
             .transport
-            .send_message(chat_id, self.prompt.final_prompt())
+            .send_message(
+                chat_id,
+                "Пожалуйста ожидайте, Ваш заказ обрабатывается".to_string(),
+            )
+            .await;
+        if let Err(e) = res {
+            error!("Error sending final request: {}", e);
+        };
+    }
+
+    async fn send_final_request(&self, chat_id: String, order_id: String) {
+        let res = self
+            .transport
+            .send_message(chat_id, self.prompt.final_prompt(order_id))
             .await;
         if let Err(e) = res {
             error!("Error sending final request: {}", e);

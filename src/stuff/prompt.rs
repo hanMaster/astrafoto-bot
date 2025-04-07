@@ -56,9 +56,10 @@ impl Prompt {
         READY.to_owned()
     }
 
-    pub fn final_prompt(&self) -> String {
+    pub fn final_prompt(&self, order_id: String) -> String {
         format!(
-            "Ваш заказ принят!\n\nПолучение по адресу:{}\nтел: {}",
+            "Ваш заказ {} принят!\n\nПолучение по адресу:{}\nтел: {}",
+            order_id,
             config().SHOP_ADDRESS,
             config().SHOP_PHONE
         )

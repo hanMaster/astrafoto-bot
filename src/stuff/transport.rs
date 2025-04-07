@@ -5,12 +5,13 @@ use crate::stuff::wa_types::{RootMsg, SendMessage};
 use log::{debug, error};
 use reqwest::StatusCode;
 pub trait Transport {
-    async fn receive_message(&self) -> Result<Message>;
+    fn receive_message(&self) -> impl Future<Output = Result<Message>> + Send;
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
 
     async fn send_order(&self, order: OrderState) -> Result<String>;
 }
 
+#[derive(Clone)]
 pub struct WhatsApp {
     api_url: String,
     token: String,
@@ -91,8 +92,8 @@ impl Transport for WhatsApp {
                             _ => Ok(Message::Empty),
                         }
                     }
-                    Err(_) => {
-                        debug!("Новых сообщений нет");
+                    Err(e) => {
+                        debug!("Новых сообщений нет: {}", e);
                         Ok(Message::Empty)
                     }
                 }

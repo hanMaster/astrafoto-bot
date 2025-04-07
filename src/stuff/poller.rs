@@ -1,31 +1,55 @@
-use log::info;
 use crate::stuff::error::Result;
 use crate::stuff::message_handler::MessageHandler;
 use crate::stuff::transport::Transport;
+use log::{error, info};
 
-pub struct Poller<'a, T, H>
+pub struct Poller<T, H>
 where
-    T: Transport + 'a,
-    H: MessageHandler,
+    T: Transport + Send + Clone + 'static,
+    H: MessageHandler + Send,
 {
-    transport: &'a T,
+    transport: T,
     handler: H,
 }
-impl<'a, T, H> Poller<'a, T, H>
+impl<T, H> Poller<T, H>
 where
-    T: Transport,
-    H: MessageHandler,
+    T: Transport + Send + Clone + 'static,
+    H: MessageHandler + Send,
 {
-    pub fn new(transport: &'a T, handler: H) -> Poller<'a, T, H> {
+    pub fn new(transport: T, handler: H) -> Poller<T, H> {
         Self { transport, handler }
     }
 
     pub async fn start_polling(&mut self) -> Result<()> {
         info!("Start polling...");
+        let (tx, mut rx) = tokio::sync::mpsc::channel(200);
+        let transport = self.transport.clone();
+        tokio::spawn(async move {
+            loop {
+                let msg = transport.receive_message().await;
+                match msg {
+                    Ok(msg) => {
+                        if tx.send(msg).await.is_err() {
+                            error!("Error sending message in channel");
+                        };
+                    }
+                    Err(e) => {
+                        error!("Error receiving message: {}", e);
+                    }
+                }
+            }
+        });
+
         loop {
-            let msg = self.transport.receive_message().await?;
-            self.handler.handle(msg).await?;
-            self.handler.handle_awaits().await?;
+            match rx.recv().await {
+                Some(msg) => {
+                    self.handler.handle(msg).await?;
+                    self.handler.handle_awaits().await?;
+                }
+                None => {
+                    info!("Channel closed, shutting down");
+                }
+            }
         }
     }
 }

@@ -11,22 +11,22 @@ pub trait MessageHandler {
     async fn handle_awaits(&mut self) -> Result<()>;
 }
 
-pub struct Handler<'a, R, T>
+pub struct Handler<R, T>
 where
     R: Repository,
     T: Transport,
 {
     repository: R,
-    transport: &'a T,
+    transport: T,
     prompt: Prompt,
 }
 
-impl<'a, R, T> Handler<'a, R, T>
+impl<R, T> Handler<R, T>
 where
     R: Repository + std::fmt::Debug,
     T: Transport,
 {
-    pub fn new(repository: R, transport: &'a T) -> Self {
+    pub fn new(repository: R, transport: T) -> Self {
         Self {
             repository,
             transport,
@@ -39,8 +39,8 @@ where
         if let Some(order) = order_option {
             let mut updated = order.clone();
             updated.add_image(message.message);
-            self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
-                .await;
+            // self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
+            //     .await;
             self.repository.set_order(updated);
             info!("Order updated in repo {:#?}", self.repository);
         } else {
@@ -235,7 +235,7 @@ where
     }
 }
 
-impl<R, T> MessageHandler for Handler<'_, R, T>
+impl<R, T> MessageHandler for Handler<R, T>
 where
     R: Repository + std::fmt::Debug,
     T: Transport,

@@ -1,3 +1,4 @@
+use log::{debug, error, info};
 use crate::config::config;
 use crate::stuff::data_types::{Message, OrderMessage, OrderState, ReceivedMessage};
 use crate::stuff::error::{Error, Result};
@@ -37,13 +38,16 @@ impl WhatsApp {
 
         let response = reqwest::Client::new().delete(&url).send().await;
         if let Err(e) = response {
-            eprintln!("[delete_notification] {:?}", e);
+            error!("[delete_notification] {:?}", e);
             self.log_to_admin(e.to_string()).await;
         }
     }
 
     pub async fn log_to_admin(&self, msg: String) {
-        let _ = self.send_message(self.admin_chat_id.clone(), msg).await;
+        let res = self.send_message(self.admin_chat_id.clone(), msg).await;
+        if let Err(e) = res {
+            error!("[log_to_admin] {:?}", e);
+        }
     }
 }
 
@@ -88,7 +92,7 @@ impl Transport for WhatsApp {
                         }
                     }
                     Err(_) => {
-                        println!("Новых сообщений нет");
+                        debug!("Новых сообщений нет");
                         Ok(Message::Empty)
                     }
                 }
@@ -125,14 +129,14 @@ impl Transport for WhatsApp {
                     self.log_to_admin(text.clone()).await;
                     Err(Error::OrderFailed(text))
                 } else {
-                    println!("Order sent successfully! Response: {}", text);
+                    info!("Order sent successfully! Response: {}", text);
                     self.log_to_admin(format!("Заказ {}", order)).await;
                     Ok(())
                 }
             }
             Err(e) => {
                 let msg = format!("Failed to send order to worker! Error: {}", e);
-                eprintln!("{msg}");
+                error!("{msg}");
                 self.log_to_admin(msg).await;
                 Err(Error::Request(e))
             }

@@ -1,31 +1,47 @@
-use log::info;
+use crate::config::config;
 use crate::stuff::error::Result;
 use crate::stuff::message_handler::MessageHandler;
-use crate::stuff::transport::Transport;
+use crate::stuff::route::get_router;
+use log::info;
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
-pub struct Poller<'a, T, H>
-where
-    T: Transport + 'a,
-    H: MessageHandler,
-{
-    transport: &'a T,
+pub struct Poller<H: MessageHandler> {
     handler: H,
 }
-impl<'a, T, H> Poller<'a, T, H>
+
+impl<H> Poller<H>
 where
-    T: Transport,
     H: MessageHandler,
 {
-    pub fn new(transport: &'a T, handler: H) -> Poller<'a, T, H> {
-        Self { transport, handler }
+    pub fn new(handler: H) -> Poller<H> {
+        Self { handler }
     }
 
     pub async fn start_polling(&mut self) -> Result<()> {
-        info!("Start polling...");
+        let (tx, mut rx) = tokio::sync::mpsc::channel(64);
+
+        tokio::spawn(async move {
+            let port = config().HOOK_PORT;
+            let addr = SocketAddr::from(([0, 0, 0, 0], port));
+            let listener = TcpListener::bind(addr).await.expect("Failed to bind");
+
+            let app = get_router(tx.clone());
+
+            info!("Hook server started on port {}", port);
+            axum::serve(listener, app).await.expect("Axum server error");
+        });
+
         loop {
-            let msg = self.transport.receive_message().await?;
-            self.handler.handle(msg).await?;
-            self.handler.handle_awaits().await?;
+            match rx.recv().await {
+                Some(msg) => {
+                    self.handler.handle(msg).await?;
+                    self.handler.handle_awaits().await?;
+                }
+                None => {
+                    info!("Channel closed, shutting down");
+                }
+            }
         }
     }
 }
@@ -43,7 +59,7 @@ mod tests {
         let transport = WhatsApp::new();
         let repo = OrderRepository::new();
         let handler = Handler::new(repo, &transport);
-        let res = Poller::new(&transport, handler).start_polling().await;
+        let res = Poller::new(handler).start_polling().await;
 
         if let Err(ref e) = res {
             eprintln!("{}", e);

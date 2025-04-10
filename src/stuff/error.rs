@@ -13,10 +13,17 @@ pub enum Error {
     SizeInvalid(String),
     OrderWrongState,
     ParseFailed(ParseIntError),
-    OrderFailed(String)
+    OrderFailed(String),
+    Io(std::io::Error),
 }
 
 // region:    ---From
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::Io(err)
+    }
+}
+
 impl From<ParseIntError> for Error {
     fn from(err: ParseIntError) -> Error {
         Error::ParseFailed(err)

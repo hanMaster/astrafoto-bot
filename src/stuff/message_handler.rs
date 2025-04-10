@@ -7,26 +7,26 @@ use crate::stuff::transport::Transport;
 use log::{error, info};
 
 pub trait MessageHandler {
-    async fn handle(&mut self, message: Message) -> Result<()>;
+    fn handle(&mut self, message: Message) -> impl Future<Output = Result<()>> + Send;
     async fn handle_awaits(&mut self) -> Result<()>;
 }
 
-pub struct Handler<'a, R, T>
+pub struct Handler<R, T>
 where
     R: Repository,
-    T: Transport,
+    T: Transport + Send + Sync + 'static,
 {
     repository: R,
-    transport: &'a T,
+    transport: T,
     prompt: Prompt,
 }
 
-impl<'a, R, T> Handler<'a, R, T>
+impl<R, T> Handler<R, T>
 where
     R: Repository + std::fmt::Debug,
-    T: Transport,
+    T: Transport + Send + Sync + 'static,
 {
-    pub fn new(repository: R, transport: &'a T) -> Self {
+    pub fn new(repository: R, transport: T) -> Self {
         Self {
             repository,
             transport,
@@ -235,10 +235,10 @@ where
     }
 }
 
-impl<R, T> MessageHandler for Handler<'_, R, T>
+impl<R, T> MessageHandler for Handler<R, T>
 where
-    R: Repository + std::fmt::Debug,
-    T: Transport,
+    R: Repository + std::fmt::Debug + Send + Sync + 'static,
+    T: Transport + Clone + Send + Sync + 'static,
 {
     async fn handle(&mut self, message: Message) -> Result<()> {
         match message {

@@ -28,6 +28,7 @@ pub struct Config {
     pub NO_FILES_TIMEOUT: u64,
     pub REPEAT_COUNT: i32,
     pub REPEAT_TIMEOUT: u64,
+    pub HOOK_PORT: u16,
 }
 
 impl Config {
@@ -44,6 +45,7 @@ impl Config {
             NO_FILES_TIMEOUT: get_env_as_parse("NO_FILES_TIMEOUT")?,
             REPEAT_COUNT: get_env_as_parse("REPEAT_COUNT")?,
             REPEAT_TIMEOUT: get_env_as_parse("REPEAT_TIMEOUT")?,
+            HOOK_PORT: get_env_as_parse("HOOK_PORT")?,
         })
     }
 }

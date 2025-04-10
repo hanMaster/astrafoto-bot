@@ -8,3 +8,5 @@ pub mod message_handler;
 pub mod repository;
 pub mod prompt;
 mod wa_types;
+
+mod route;

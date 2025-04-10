@@ -6,11 +6,12 @@ use log::{debug, error};
 use reqwest::StatusCode;
 pub trait Transport {
     async fn receive_message(&self) -> Result<Message>;
-    async fn send_message(&self, chat_id: String, msg: String) -> Result<()>;
+    fn send_message(&self, chat_id: String, msg: String) -> impl Future<Output = Result<()>> + Send;
 
-    async fn send_order(&self, order: OrderState) -> Result<String>;
+    fn send_order(&self, order: OrderState) -> impl Future<Output = Result<String>> + Send;
 }
 
+#[derive(Clone)]
 pub struct WhatsApp {
     api_url: String,
     token: String,

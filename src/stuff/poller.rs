@@ -4,6 +4,7 @@ use crate::stuff::message_handler::MessageHandler;
 use crate::stuff::route::get_router;
 use log::{error, info};
 use std::net::SocketAddr;
+use std::time::Duration;
 use tokio::net::TcpListener;
 
 pub struct Poller<H: MessageHandler + Clone + Send + Sync + 'static> {
@@ -35,9 +36,12 @@ where
         let mut clonned = self.handler.clone();
 
         tokio::spawn(async move {
-            let res = clonned.handle_awaits().await;
-            if let Err(e) = res {
-                error!("Awaits handler error: {}", e);
+            loop {
+                let res = clonned.handle_awaits().await;
+                if let Err(e) = res {
+                    error!("Awaits handler error: {}", e);
+                }
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
 

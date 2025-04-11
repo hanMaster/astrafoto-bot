@@ -5,10 +5,6 @@ use std::time::SystemTime;
 pub struct Timestamp(u64);
 
 impl Timestamp {
-    pub fn from(d: u64) -> Self {
-        Timestamp(d)
-    }
-
     pub fn now() -> Self {
         Self(
             SystemTime::now()

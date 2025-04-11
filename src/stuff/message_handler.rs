@@ -39,16 +39,12 @@ where
         if let Some(order) = order_option {
             let mut updated = order.clone();
             updated.add_image(message.message);
-            // self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
-            //     .await;
             self.repository.set_order(updated);
-            info!("Order updated in repo {:#?}", self.repository);
+            info!("Add image {:#?}", self.repository);
         } else {
             let new_order = OrderState::from_img_msg(message);
-            // self.send_receive_file_confirmation(new_order.get_chat_id(), new_order.files_count())
-            //     .await;
             self.repository.set_order(new_order);
-            info!("Order created in repo {:#?}", self.repository);
+            info!("New order from image {:#?}", self.repository);
         }
         Ok(())
     }
@@ -65,6 +61,11 @@ where
             }
 
             match order {
+                OrderState::NewOrder { .. } => {
+                    self.paper_requested(order)?;
+                    self.send_paper_request(chat_id).await;
+                }
+
                 OrderState::RaperRequested { .. } => {
                     let res = self.try_set_paper(order, message);
                     match res {
@@ -116,6 +117,12 @@ where
             info!("Order created {:#?}", self.repository);
             self.send_paper_request(chat_id).await;
         }
+        Ok(())
+    }
+
+    fn paper_requested(&mut self, o: OrderState) -> Result<()> {
+        let new_state = o.into_order_with_paper_requested()?;
+        self.repository.set_order(new_state);
         Ok(())
     }
 
@@ -269,6 +276,9 @@ where
                         clonned.requested();
                         self.repository.set_order(clonned);
                         match o {
+                            OrderState::NewOrder { .. } => {
+                                self.send_paper_request(o.get_chat_id()).await;
+                            }
                             OrderState::RaperRequested { .. } => {
                                 self.send_paper_request(o.get_chat_id()).await;
                             }

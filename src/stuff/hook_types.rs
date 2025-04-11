@@ -63,7 +63,7 @@ pub struct HookRoot {
     pub type_webhook: String,
     // #[serde(rename = "instanceData")]
     // pub instance_data: InstanceData,
-    pub timestamp: u64,
+    // pub timestamp: u64,
     // #[serde(rename = "idMessage")]
     // pub id_message: Option<String>,
     #[serde(rename = "senderData")]

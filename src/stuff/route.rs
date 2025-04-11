@@ -7,7 +7,7 @@ use axum::{Json, Router};
 use tokio::sync::mpsc::Sender;
 
 pub fn get_router(tx: Sender<Message>) -> Router {
-    Router::new().route("/", post(handle_root)).with_state(tx)
+    Router::new().route("/hook", post(handle_root)).with_state(tx)
 }
 
 #[axum::debug_handler]

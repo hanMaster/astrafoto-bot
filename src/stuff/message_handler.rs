@@ -278,6 +278,7 @@ where
                         match o {
                             OrderState::NewOrder { .. } => {
                                 self.send_paper_request(o.get_chat_id()).await;
+                                self.paper_requested(o)?;
                             }
                             OrderState::RaperRequested { .. } => {
                                 self.send_paper_request(o.get_chat_id()).await;

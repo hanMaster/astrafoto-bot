@@ -272,6 +272,7 @@ where
             match o.have_files() {
                 true => {
                     if let OrderState::NewOrder { .. } = o {
+                        info!("New order last_time_sec {:?}", o.last_time_sec());
                         if o.last_time_sec() > 3 {
                             self.send_paper_request(o.get_chat_id()).await;
                             self.paper_requested(o)?;
@@ -279,6 +280,8 @@ where
                     } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
+                        info!("send requests {:?}", o);
+                        
                         let mut clonned = o.clone();
                         clonned.requested();
                         self.repository.set_order(clonned);
@@ -299,7 +302,9 @@ where
                     } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() < config().REPEAT_TIMEOUT
                     {
+                        info!("Just wait {:?}", o);
                     } else {
+                        info!("orders_to_remove {:?}", o);
                         orders_to_remove.push(o.get_chat_id());
                     }
                 }

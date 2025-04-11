@@ -36,12 +36,12 @@ where
             match rx.recv().await {
                 Some(msg) => {
                     self.handler.handle(msg).await?;
-                    self.handler.handle_awaits().await?;
                 }
                 None => {
                     info!("Channel closed, shutting down");
                 }
             }
+            self.handler.handle_awaits().await?;
         }
     }
 }

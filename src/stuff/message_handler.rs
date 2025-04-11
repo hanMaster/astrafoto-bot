@@ -281,7 +281,7 @@ where
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
                         info!("send requests {:?}", o);
-                        
+
                         let mut clonned = o.clone();
                         clonned.requested();
                         self.repository.set_order(clonned);
@@ -300,7 +300,7 @@ where
                             }
                         }
                     } else if o.repeats() < config().REPEAT_COUNT
-                        && o.last_time_sec() < config().REPEAT_TIMEOUT
+                        && o.last_time_sec() <= config().REPEAT_TIMEOUT
                     {
                         info!("Just wait {:?}", o);
                     } else {

@@ -10,3 +10,4 @@ pub mod prompt;
 mod wa_types;
 
 mod route;
+mod hook_types;

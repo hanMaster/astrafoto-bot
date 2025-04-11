@@ -1,16 +1,50 @@
 use crate::stuff::error::{Error, Result};
-use serde::Serialize;
+use crate::stuff::hook_types::HookRoot;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum Message {
     Text(ReceivedMessage),
     Image(ReceivedMessage),
+    StateInstance(String),
     Empty,
 }
 
-#[derive(Debug, Clone)]
+impl From <HookRoot> for Message {
+    fn from(m: HookRoot) -> Self {
+        match m.type_webhook.as_str() {
+            "incomingMessageReceived" => {
+                let message_data = m.message_data.unwrap();
+                let sender_data = m.sender_data.unwrap();
+                match message_data.type_message.as_ref() {
+                    "imageMessage" => {
+                        Message::Image(ReceivedMessage {
+                            chat_id: sender_data.chat_id,
+                            customer_name: sender_data.sender_name,
+                            message: message_data.file_message_data.unwrap().download_url,
+                        })
+                    },
+                    "textMessage" => Message::Text(ReceivedMessage {
+                        chat_id: sender_data.chat_id,
+                        customer_name: sender_data.sender_name,
+                        message: message_data.text_message_data.unwrap().text_message,
+                    }),
+                    _ => Message::Empty,
+                }
+            }
+
+            "statusInstanceChanged" => {
+                Message::StateInstance(m.status_instance.unwrap())
+            }
+
+            _ => Message::Empty,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct ReceivedMessage {
     pub chat_id: String,
     pub customer_name: String,

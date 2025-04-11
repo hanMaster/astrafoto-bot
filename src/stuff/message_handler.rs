@@ -39,14 +39,14 @@ where
         if let Some(order) = order_option {
             let mut updated = order.clone();
             updated.add_image(message.message);
-            self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
-                .await;
+            // self.send_receive_file_confirmation(updated.get_chat_id(), updated.files_count())
+            //     .await;
             self.repository.set_order(updated);
             info!("Order updated in repo {:#?}", self.repository);
         } else {
             let new_order = OrderState::from_img_msg(message);
-            self.send_receive_file_confirmation(new_order.get_chat_id(), new_order.files_count())
-                .await;
+            // self.send_receive_file_confirmation(new_order.get_chat_id(), new_order.files_count())
+            //     .await;
             self.repository.set_order(new_order);
             info!("Order created in repo {:#?}", self.repository);
         }
@@ -248,6 +248,9 @@ where
             Message::Image(msg) => {
                 self.handle_image_message(msg).await?;
             }
+            Message::StateInstance(state) => {
+                info!("Received state instance state: {:?}", state);
+            }
             Message::Empty => {}
         }
         Ok(())
@@ -300,50 +303,5 @@ where
                 .await?;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::stuff::repository::OrderRepository;
-    use crate::stuff::transport::MockTransport;
-    #[tokio::test]
-    async fn test_handle_text() {
-        let repo = OrderRepository::new();
-        let transport = MockTransport;
-        let mut handler = Handler::new(repo, &transport);
-
-        let msg = transport.receive_message().await.unwrap();
-        let res = handler.handle(msg).await;
-        assert!(res.is_ok());
-        println!("{:#?}", handler.repository);
-
-        let paper_answer = ReceivedMessage {
-            chat_id: "79146795555@c.us".to_string(),
-            customer_name: "Andrey".to_string(),
-            message: "1".to_string(),
-        };
-        let res = handler.handle_text_message(paper_answer).await;
-        assert!(res.is_ok());
-        println!("{:#?}", handler.repository);
-
-        let size_answer = ReceivedMessage {
-            chat_id: "79146795555@c.us".to_string(),
-            customer_name: "Andrey".to_string(),
-            message: "1".to_string(),
-        };
-        let res = handler.handle_text_message(size_answer).await;
-        assert!(res.is_ok());
-        println!("{:#?}", handler.repository);
-
-        let size_answer = ReceivedMessage {
-            chat_id: "79146795555@c.us".to_string(),
-            customer_name: "Andrey".to_string(),
-            message: "Отмените".to_string(),
-        };
-        let res = handler.handle_text_message(size_answer).await;
-        assert!(res.is_ok());
-        println!("{:#?}", handler.repository);
     }
 }

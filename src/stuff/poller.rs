@@ -19,7 +19,7 @@ where
     }
 
     pub async fn start_polling(&mut self) -> Result<()> {
-        let (tx, mut rx) = tokio::sync::mpsc::channel(64);
+        let (tx, mut rx) = tokio::sync::mpsc::channel(100);
 
         tokio::spawn(async move {
             let port = config().HOOK_PORT;

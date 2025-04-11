@@ -2,17 +2,17 @@ use crate::config::config;
 use crate::stuff::error::Result;
 use crate::stuff::message_handler::MessageHandler;
 use crate::stuff::route::get_router;
-use log::info;
+use log::{error, info};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 
-pub struct Poller<H: MessageHandler> {
+pub struct Poller<H: MessageHandler + Clone + Send + Sync + 'static> {
     handler: H,
 }
 
 impl<H> Poller<H>
 where
-    H: MessageHandler,
+    H: MessageHandler + Clone + Send + Sync + 'static,
 {
     pub fn new(handler: H) -> Poller<H> {
         Self { handler }
@@ -32,6 +32,15 @@ where
             axum::serve(listener, app).await.expect("Axum server error");
         });
 
+        let mut clonned = self.handler.clone();
+
+        tokio::spawn(async move {
+            let res = clonned.handle_awaits().await;
+            if let Err(e) = res {
+                error!("Awaits handler error: {}", e);
+            }
+        });
+
         loop {
             match rx.recv().await {
                 Some(msg) => {
@@ -41,7 +50,6 @@ where
                     info!("Channel closed, shutting down");
                 }
             }
-            self.handler.handle_awaits().await?;
         }
     }
 }

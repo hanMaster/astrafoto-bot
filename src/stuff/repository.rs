@@ -1,50 +1,48 @@
 use crate::stuff::data_types::OrderState;
 use crate::stuff::error::{Error, Result};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-pub trait Repository {
+pub trait Repository: Clone {
     fn get_order(&self, chat_id: &str) -> Option<OrderState>;
     fn get_orders(&self) -> HashMap<String, OrderState>;
     fn set_order(&mut self, state: OrderState);
     fn delete_order(&mut self, chat_id: &str) -> Result<()>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OrderRepository {
-    orders: HashMap<String, OrderState>,
+    orders: Arc<Mutex<HashMap<String, OrderState>>>,
 }
 
 impl OrderRepository {
     pub fn new() -> OrderRepository {
         Self {
-            orders: HashMap::new(),
+            orders: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
 
 impl Repository for OrderRepository {
     fn get_order(&self, chat_id: &str) -> Option<OrderState> {
-        self.orders.get(chat_id).cloned()
+        self.orders.lock().unwrap().get(chat_id).cloned()
     }
 
     fn get_orders(&self) -> HashMap<String, OrderState> {
-        self.orders.clone()
+        self.orders.lock().unwrap().clone()
     }
 
     fn set_order(&mut self, state: OrderState) {
-        let order = self.orders.get_mut(&state.get_chat_id());
-        match order {
-            Some(order) => {
-                *order = state;
-            }
-            None => {
-                self.orders.insert(state.get_chat_id(), state);
-            }
-        }
+        self.orders
+            .lock()
+            .unwrap()
+            .entry(state.get_chat_id())
+            .and_modify(|v| *v = state.clone())
+            .or_insert(state);
     }
 
     fn delete_order(&mut self, chat_id: &str) -> Result<()> {
-        let res = self.orders.remove(chat_id);
+        let res = self.orders.lock().unwrap().remove(chat_id);
         match res {
             None => Err(Error::OrderNotFound(chat_id.to_string())),
             Some(_) => Ok(()),
@@ -80,12 +78,12 @@ mod tests {
         repo.set_order(order.clone());
 
         println!("Order update result: {:?}", repo);
-        let saved = repo.orders.get("79146795552").unwrap();
-        assert_eq!(*saved, order);
+        let saved = repo.get_order("79146795552").unwrap();
+        assert_eq!(saved, order);
         {
             repo.delete_order("79146795552").unwrap();
             println!("Order delete result: {:?}", repo);
         }
-        assert_eq!(repo.orders.len(), 1);
+        assert_eq!(repo.orders.lock().unwrap().len(), 1);
     }
 }

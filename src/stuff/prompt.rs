@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
 
+#[derive(Clone)]
 pub struct Prompt {
     paper: Paper,
 }

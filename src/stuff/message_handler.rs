@@ -8,13 +8,14 @@ use log::{error, info};
 
 pub trait MessageHandler {
     fn handle(&mut self, message: Message) -> impl Future<Output = Result<()>> + Send;
-    async fn handle_awaits(&mut self) -> Result<()>;
+    fn handle_awaits(&mut self) -> impl Future<Output = Result<()>> + Send;
 }
 
+#[derive(Clone)]
 pub struct Handler<R, T>
 where
-    R: Repository,
-    T: Transport + Send + Sync + 'static,
+    R: Repository + Send + Sync + Clone,
+    T: Transport + Send + Sync + 'static + Clone,
 {
     repository: R,
     transport: T,
@@ -23,8 +24,8 @@ where
 
 impl<R, T> Handler<R, T>
 where
-    R: Repository + std::fmt::Debug,
-    T: Transport + Send + Sync + 'static,
+    R: Repository + std::fmt::Debug + Send + Sync + Clone,
+    T: Transport + Send + Sync + 'static + Clone,
 {
     pub fn new(repository: R, transport: T) -> Self {
         Self {
@@ -264,6 +265,7 @@ where
     }
 
     async fn handle_awaits(&mut self) -> Result<()> {
+        info!("handling awaits");
         let orders = self.repository.get_orders();
         let mut orders_to_remove = vec![];
         for (_, o) in orders {

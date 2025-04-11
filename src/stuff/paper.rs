@@ -14,6 +14,7 @@ pub struct PaperType {
     pub sizes: Vec<PaperSize>,
 }
 
+#[derive(Clone)]
 pub struct Paper {
     paper: Vec<PaperType>,
 }

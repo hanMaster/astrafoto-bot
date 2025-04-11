@@ -265,7 +265,6 @@ where
     }
 
     async fn handle_awaits(&mut self) -> Result<()> {
-        info!("handling awaits");
         let orders = self.repository.get_orders();
         let mut orders_to_remove = vec![];
         for (_, o) in orders {

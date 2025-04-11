@@ -269,7 +269,12 @@ where
         for (_, o) in orders {
             match o.have_files() {
                 true => {
-                    if o.repeats() < config().REPEAT_COUNT
+                    if let OrderState::NewOrder { .. } = o {
+                        if o.last_time_sec() > 3 {
+                            self.send_paper_request(o.get_chat_id()).await;
+                            self.paper_requested(o)?;
+                        }
+                    } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
                         let mut clonned = o.clone();
@@ -277,8 +282,7 @@ where
                         self.repository.set_order(clonned);
                         match o {
                             OrderState::NewOrder { .. } => {
-                                self.send_paper_request(o.get_chat_id()).await;
-                                self.paper_requested(o)?;
+                                unreachable!()
                             }
                             OrderState::RaperRequested { .. } => {
                                 self.send_paper_request(o.get_chat_id()).await;

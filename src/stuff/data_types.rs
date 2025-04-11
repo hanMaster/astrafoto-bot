@@ -1,8 +1,8 @@
+use crate::stuff::timestamp::Timestamp;
 use crate::stuff::error::{Error, Result};
 use crate::stuff::hook_types::HookRoot;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use std::time::SystemTime;
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum Message {
@@ -24,12 +24,14 @@ impl From <HookRoot> for Message {
                             chat_id: sender_data.chat_id,
                             customer_name: sender_data.sender_name,
                             message: message_data.file_message_data.unwrap().download_url,
+                            timestamp: m.timestamp,
                         })
                     },
                     "textMessage" => Message::Text(ReceivedMessage {
                         chat_id: sender_data.chat_id,
                         customer_name: sender_data.sender_name,
                         message: message_data.text_message_data.unwrap().text_message,
+                        timestamp: m.timestamp,
                     }),
                     _ => Message::Empty,
                 }
@@ -49,6 +51,7 @@ pub struct ReceivedMessage {
     pub chat_id: String,
     pub customer_name: String,
     pub message: String,
+    pub timestamp: u64,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -58,7 +61,7 @@ pub enum OrderState {
         customer_name: String,
         files: Vec<String>,
         repeats: i32,
-        last_msg_time: SystemTime,
+        last_msg_time: Timestamp,
     },
     SizeRequested {
         chat_id: String,
@@ -66,7 +69,7 @@ pub enum OrderState {
         paper: String,
         files: Vec<String>,
         repeats: i32,
-        last_msg_time: SystemTime,
+        last_msg_time: Timestamp,
     },
     SizeSelected {
         chat_id: String,
@@ -76,7 +79,7 @@ pub enum OrderState {
         price: i32,
         files: Vec<String>,
         repeats: i32,
-        last_msg_time: SystemTime,
+        last_msg_time: Timestamp,
     },
 }
 
@@ -87,7 +90,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![msg.message],
             repeats: 0,
-            last_msg_time: SystemTime::now(),
+            last_msg_time: Timestamp::from(msg.timestamp),
         }
     }
 
@@ -97,7 +100,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![],
             repeats: 0,
-            last_msg_time: SystemTime::now(),
+            last_msg_time: Timestamp::from(msg.timestamp),
         }
     }
 
@@ -120,13 +123,13 @@ impl OrderState {
     pub fn last_time_sec(&self) -> u64 {
         match self {
             OrderState::RaperRequested { last_msg_time, .. } => {
-                last_msg_time.elapsed().unwrap().as_secs()
+                last_msg_time.elapsed()
             }
             OrderState::SizeRequested { last_msg_time, .. } => {
-                last_msg_time.elapsed().unwrap().as_secs()
+                last_msg_time.elapsed()
             }
             OrderState::SizeSelected { last_msg_time, .. } => {
-                last_msg_time.elapsed().unwrap().as_secs()
+                last_msg_time.elapsed()
             }
         }
     }
@@ -147,7 +150,7 @@ impl OrderState {
                 ..
             } => {
                 files.push(url);
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
             OrderState::SizeRequested {
                 files,
@@ -155,7 +158,7 @@ impl OrderState {
                 ..
             } => {
                 files.push(url);
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
             OrderState::SizeSelected {
                 files,
@@ -163,7 +166,7 @@ impl OrderState {
                 ..
             } => {
                 files.push(url);
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
         }
     }
@@ -197,7 +200,7 @@ impl OrderState {
                 paper,
                 files,
                 repeats: 0,
-                last_msg_time: SystemTime::now(),
+                last_msg_time: Timestamp::now(),
             }),
             OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
@@ -221,7 +224,7 @@ impl OrderState {
                 price,
                 files,
                 repeats: 0,
-                last_msg_time: SystemTime::now(),
+                last_msg_time: Timestamp::now(),
             }),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
         }
@@ -235,7 +238,7 @@ impl OrderState {
                 ..
             } => {
                 *repeats += 1;
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
             OrderState::SizeRequested {
                 repeats,
@@ -243,7 +246,7 @@ impl OrderState {
                 ..
             } => {
                 *repeats += 1;
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
             OrderState::SizeSelected {
                 repeats,
@@ -251,7 +254,7 @@ impl OrderState {
                 ..
             } => {
                 *repeats += 1;
-                *last_msg_time = SystemTime::now();
+                *last_msg_time = Timestamp::now();
             }
         }
     }

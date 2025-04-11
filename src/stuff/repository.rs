@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::stuff::data_types::OrderState;
 use crate::stuff::error::{Error, Result};
+use std::collections::HashMap;
 
 pub trait Repository {
     fn get_order(&self, chat_id: &str) -> Option<OrderState>;
@@ -54,8 +54,8 @@ impl Repository for OrderRepository {
 
 #[cfg(test)]
 mod tests {
-    use std::time::SystemTime;
     use super::*;
+    use crate::stuff::timestamp::Timestamp;
     #[test]
     fn repo_update_order() {
         let mut repo = OrderRepository::new();
@@ -64,7 +64,7 @@ mod tests {
             customer_name: "John".to_string(),
             files: vec![],
             repeats: 0,
-            last_msg_time: SystemTime::now(),
+            last_msg_time: Timestamp::now(),
         };
         repo.set_order(order);
         println!("Order update result: {:?}", repo);
@@ -75,7 +75,7 @@ mod tests {
             paper: "paper".to_string(),
             files: vec![],
             repeats: 0,
-            last_msg_time: SystemTime::now(),
+            last_msg_time: Timestamp::now(),
         };
         repo.set_order(order.clone());
 

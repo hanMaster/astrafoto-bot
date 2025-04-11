@@ -274,6 +274,7 @@ where
                     if let OrderState::NewOrder { .. } = o {
                         info!("New order last_time_sec {:?}", o.last_time_sec());
                         if o.last_time_sec() > 3 {
+                            self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
                             self.send_paper_request(o.get_chat_id()).await;
                             self.paper_requested(o)?;
                         }

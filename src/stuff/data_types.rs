@@ -98,11 +98,10 @@ impl OrderState {
     }
 
     pub fn from_txt_msg(msg: ReceivedMessage) -> OrderState {
-        OrderState::RaperRequested {
+        OrderState::FilesReceiving {
             chat_id: msg.chat_id,
             customer_name: msg.customer_name,
             files: vec![],
-            repeats: 0,
             last_msg_time: Timestamp::now(),
             count_informed: 0,
         }

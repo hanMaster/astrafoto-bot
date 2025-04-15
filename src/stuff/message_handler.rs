@@ -277,7 +277,12 @@ where
         for (_, o) in orders {
             match o.have_files() {
                 true => {
-                    if o.repeats() < config().REPEAT_COUNT
+                    if let OrderState::NewOrder {..} = o {
+                        if o.last_time_sec() > 5 {
+                            self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
+                        }
+                    }
+                    else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
                         info!("send requests\n{:?}", o);

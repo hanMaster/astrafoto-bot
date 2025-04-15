@@ -76,12 +76,12 @@ where
                 }
 
                 OrderState::RaperRequested { .. } => {
-                    let files_count = order.files_count();
+                    // let files_count = order.files_count();
                     let res = self.try_set_paper(order, message);
                     match res {
                         Ok(paper) => {
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                                .await;
+                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                            //     .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         Err(_) => {
@@ -91,18 +91,18 @@ where
                 }
 
                 OrderState::SizeRequested { .. } => {
-                    let files_count = order.files_count();
+                    // let files_count = order.files_count();
                     let res = self.try_set_size(order, message);
                     match res {
                         Ok(_) => {
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                                .await;
+                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                            //     .await;
                             self.send_ready_request(chat_id.clone()).await;
                         }
                         Err(Error::SizeInvalid(paper)) => {
                             error!("Paper size invalid: {:?}", paper);
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                                .await;
+                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                            //     .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         _ => {}

@@ -54,6 +54,7 @@ pub enum OrderState {
         customer_name: String,
         files: Vec<String>,
         last_msg_time: Timestamp,
+        count_informed: usize,
     },
     RaperRequested {
         chat_id: String,
@@ -61,6 +62,7 @@ pub enum OrderState {
         files: Vec<String>,
         repeats: i32,
         last_msg_time: Timestamp,
+        count_informed: usize,
     },
     SizeRequested {
         chat_id: String,
@@ -69,6 +71,7 @@ pub enum OrderState {
         files: Vec<String>,
         repeats: i32,
         last_msg_time: Timestamp,
+        count_informed: usize,
     },
     SizeSelected {
         chat_id: String,
@@ -79,6 +82,7 @@ pub enum OrderState {
         files: Vec<String>,
         repeats: i32,
         last_msg_time: Timestamp,
+        count_informed: usize,
     },
 }
 
@@ -89,6 +93,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![msg.message],
             last_msg_time: Timestamp::now(),
+            count_informed: 0,
         }
     }
 
@@ -99,6 +104,7 @@ impl OrderState {
             files: vec![],
             repeats: 0,
             last_msg_time: Timestamp::now(),
+            count_informed: 0,
         }
     }
 
@@ -199,6 +205,7 @@ impl OrderState {
                 chat_id,
                 customer_name,
                 files,
+                count_informed,
                 ..
             } => Ok(OrderState::RaperRequested {
                 chat_id,
@@ -206,6 +213,7 @@ impl OrderState {
                 files,
                 repeats: 0,
                 last_msg_time: Timestamp::now(),
+                count_informed,
             }),
             OrderState::RaperRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
@@ -219,6 +227,7 @@ impl OrderState {
                 chat_id,
                 customer_name,
                 files,
+                count_informed,
                 ..
             } => Ok(OrderState::SizeRequested {
                 chat_id,
@@ -227,6 +236,7 @@ impl OrderState {
                 files,
                 repeats: 0,
                 last_msg_time: Timestamp::now(),
+                count_informed,
             }),
             OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
@@ -243,6 +253,7 @@ impl OrderState {
                 customer_name,
                 paper,
                 files,
+                count_informed,
                 ..
             } => Ok(OrderState::SizeSelected {
                 chat_id,
@@ -253,6 +264,7 @@ impl OrderState {
                 files,
                 repeats: 0,
                 last_msg_time: Timestamp::now(),
+                count_informed,
             }),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
         }

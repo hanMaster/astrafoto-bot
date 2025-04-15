@@ -56,6 +56,7 @@ where
         if let Some(order) = order_option {
             // Клиент пожелал отменить заказ
             if message.message.to_lowercase().contains("отмен") {
+                info!("Order cancelled {:#?}", order);
                 self.repository.delete_order(&chat_id)?;
                 self.send_cancel(chat_id).await;
                 return Ok(());

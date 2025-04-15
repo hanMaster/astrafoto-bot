@@ -29,6 +29,13 @@ impl WhatsApp {
             worker_url: config().WORKER_URL.to_owned(),
         }
     }
+
+    pub async fn log_to_admin(&self, msg: String) {
+        let res = self.send_message(self.admin_chat_id.clone(), msg).await;
+        if let Err(e) = res {
+            error!("[log_to_admin] {:?}", e);
+        }
+    }
 }
 
 impl Transport for WhatsApp {

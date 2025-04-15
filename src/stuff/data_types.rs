@@ -149,20 +149,34 @@ impl OrderState {
                 *last_msg_time = Timestamp::now();
             }
             OrderState::RaperRequested {
+                chat_id,
+                customer_name,
                 files,
-                last_msg_time,
                 ..
             } => {
                 files.push(url);
-                *last_msg_time = Timestamp::now();
+                *self = OrderState::FilesReceiving {
+                    chat_id: chat_id.clone(),
+                    customer_name: customer_name.clone(),
+                    files: files.clone(),
+                    last_msg_time: Timestamp::now(),
+                    first_prompt_sent: false,
+                }
             }
             OrderState::SizeRequested {
+                chat_id,
+                customer_name,
                 files,
-                last_msg_time,
                 ..
             } => {
                 files.push(url);
-                *last_msg_time = Timestamp::now();
+                *self = OrderState::FilesReceiving {
+                    chat_id: chat_id.clone(),
+                    customer_name: customer_name.clone(),
+                    files: files.clone(),
+                    last_msg_time: Timestamp::now(),
+                    first_prompt_sent: false,
+                }
             }
             OrderState::SizeSelected { .. } => {}
         }

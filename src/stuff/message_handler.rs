@@ -263,7 +263,9 @@ where
                 self.handle_image_message(msg).await?;
             }
             Message::StateInstance(state) => {
-                info!("Received state instance state: {:?}", state);
+                let msg = format!("Received state instance: {:?}", state);
+                info!("{msg}");
+                self.transport.log_to_admin(msg).await;
             }
             Message::Empty => {}
         }

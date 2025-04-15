@@ -7,6 +7,8 @@ use reqwest::StatusCode;
 pub trait Transport {
     fn send_message(&self, chat_id: String, msg: String) -> impl Future<Output = Result<()>> + Send;
 
+    fn log_to_admin(&self, msg: String)-> impl Future<Output = ()> + Send;
+
     fn send_order(&self, order: OrderState) -> impl Future<Output = Result<String>> + Send;
 }
 
@@ -27,13 +29,6 @@ impl WhatsApp {
             worker_url: config().WORKER_URL.to_owned(),
         }
     }
-
-    pub async fn log_to_admin(&self, msg: String) {
-        let res = self.send_message(self.admin_chat_id.clone(), msg).await;
-        if let Err(e) = res {
-            error!("[log_to_admin] {:?}", e);
-        }
-    }
 }
 
 impl Transport for WhatsApp {
@@ -47,6 +42,13 @@ impl Transport for WhatsApp {
             .send()
             .await?;
         Ok(())
+    }
+
+    async fn log_to_admin(&self, msg: String) {
+        let res = self.send_message(self.admin_chat_id.clone(), msg).await;
+        if let Err(e) = res {
+            error!("[log_to_admin] {:?}", e);
+        }
     }
 
     async fn send_order(&self, order: OrderState) -> Result<String> {
@@ -84,6 +86,10 @@ impl Transport for MockTransport {
     async fn send_message(&self, chat_id: String, msg: String) -> Result<()> {
         println!("Sending message to: {}, {}", chat_id, &msg);
         Ok(())
+    }
+
+    async fn log_to_admin(&self, msg: String) {
+        println!("Sending message to admin: {}", &msg);
     }
 
     async fn send_order(&self, order: OrderState) -> Result<String> {

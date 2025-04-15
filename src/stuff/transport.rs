@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 pub trait Transport {
     fn send_message(&self, chat_id: String, msg: String) -> impl Future<Output = Result<()>> + Send;
 
-    fn log_to_admin(&self, msg: String)-> impl Future<Output = ()> + Send;
+    fn email_state_to_admin(&self, msg: String) -> impl Future<Output = ()> + Send;
 
     fn send_order(&self, order: OrderState) -> impl Future<Output = Result<String>> + Send;
 }
@@ -44,16 +44,20 @@ impl Transport for WhatsApp {
         Ok(())
     }
 
-    async fn log_to_admin(&self, msg: String) {
-        let res = self.send_message(self.admin_chat_id.clone(), msg).await;
-        if let Err(e) = res {
-            error!("[log_to_admin] {:?}", e);
+    async fn email_state_to_admin(&self, msg: String) {
+        let send_result = reqwest::Client::new()
+            .post(format!("{}state", self.worker_url))
+            .body(msg)
+            .send()
+            .await;
+        if let Err(e) = send_result {
+            error!("[email_to_admin] {:?}", e);
         }
     }
 
     async fn send_order(&self, order: OrderState) -> Result<String> {
         let send_result = reqwest::Client::new()
-            .post(&self.worker_url)
+            .post(format!("{}order", self.worker_url))
             .json::<OrderMessage>(&order.clone().into())
             .send()
             .await;

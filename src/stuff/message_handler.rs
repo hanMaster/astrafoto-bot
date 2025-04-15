@@ -265,7 +265,7 @@ where
             Message::StateInstance(state) => {
                 let msg = format!("Received state instance: {:?}", state);
                 info!("{msg}");
-                self.transport.log_to_admin(msg).await;
+                self.transport.email_state_to_admin(state).await;
             }
             Message::Empty => {}
         }

@@ -11,7 +11,7 @@ mod stuff;
 #[tokio::main]
 async fn main() -> Result<()> {
     let transport = WhatsApp::new();
-    pretty_env_logger::init_timed();
+    pretty_env_logger::init();
     let repo = OrderRepository::new();
     let handler = Handler::new(repo, transport);
     Poller::new(handler).start_polling().await?;

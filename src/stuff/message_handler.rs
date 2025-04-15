@@ -64,7 +64,10 @@ where
 
             match order {
                 OrderState::FilesReceiving { .. } => {
-                    if message.message.to_lowercase().contains("все") && order.have_files() {
+                    let received = message.message.to_lowercase();
+
+                    if (received.contains("все") || received.contains("всё")) && order.have_files()
+                    {
                         self.send_receive_file_confirmation(chat_id.clone(), order.files_count())
                             .await;
                         self.paper_requested(order)?;
@@ -184,7 +187,8 @@ where
             .transport
             .send_message(
                 chat_id,
-                r#"Когда закончите с отправкой файлов, напишите: все"#.to_string(),
+                r#"Загрузите файлы для печати. Когда закончите с отправкой файлов, напишите: все"#
+                    .to_string(),
             )
             .await;
         if let Err(e) = res {

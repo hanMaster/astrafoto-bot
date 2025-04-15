@@ -63,6 +63,7 @@ mod tests {
             files: vec![],
             repeats: 0,
             last_msg_time: Timestamp::now(),
+            count_informed: 0,
         };
         repo.set_order(order);
         println!("Order update result: {:?}", repo);
@@ -74,6 +75,7 @@ mod tests {
             files: vec![],
             repeats: 0,
             last_msg_time: Timestamp::now(),
+            count_informed: 0,
         };
         repo.set_order(order.clone());
 

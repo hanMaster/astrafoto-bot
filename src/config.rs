@@ -17,6 +17,7 @@ pub fn config() -> &'static Config {
 
 #[allow(dead_code)]
 #[allow(non_snake_case)]
+#[derive(Eq, PartialEq)]
 pub struct Config {
     pub API_URL: String,
     pub ID_INSTANCE: String,
@@ -29,6 +30,10 @@ pub struct Config {
     pub REPEAT_COUNT: i32,
     pub REPEAT_TIMEOUT: u64,
     pub HOOK_PORT: u16,
+    pub PAPER_PROMPT: String,
+    pub SECRET_TOKEN: String,
+    pub SIZE_PROMPT: String,
+    pub FILES_DONE_PROMPT: String,
 }
 
 impl Config {
@@ -46,6 +51,10 @@ impl Config {
             REPEAT_COUNT: get_env_as_parse("REPEAT_COUNT")?,
             REPEAT_TIMEOUT: get_env_as_parse("REPEAT_TIMEOUT")?,
             HOOK_PORT: get_env_as_parse("HOOK_PORT")?,
+            SECRET_TOKEN: get_env("SECRET_TOKEN")?,
+            PAPER_PROMPT: get_env("PAPER_PROMPT")?,
+            SIZE_PROMPT: get_env("SIZE_PROMPT")?,
+            FILES_DONE_PROMPT: get_env("FILES_DONE_PROMPT")?,
         })
     }
 }

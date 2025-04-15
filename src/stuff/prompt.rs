@@ -2,8 +2,6 @@ use crate::config::config;
 use crate::stuff::paper::Paper;
 use std::fmt::Write;
 
-const READY: &str = "Если Вы загрузили все фотографии, то отправьте слово: Готово";
-
 #[derive(Clone)]
 pub struct Prompt {
     paper: Paper,
@@ -34,7 +32,7 @@ impl Prompt {
 
     pub fn paper_prompt(&self) -> String {
         self.paper.paper_vec().iter().enumerate().fold(
-            "Выберите тип бумаги\nУкажите цифру варианта:\n\n".to_string(),
+            config().PAPER_PROMPT.to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {}", idx + 1, b);
                 output
@@ -45,16 +43,12 @@ impl Prompt {
     pub fn size_prompt(&self, paper: &str) -> String {
         let sizes = self.paper.sizes_by_paper(paper);
         sizes.iter().enumerate().fold(
-            "Выберите размер фотографий\nУкажите цифру варианта:\n\n".to_string(),
+            config().SIZE_PROMPT.to_string(),
             |mut output, (idx, p)| {
                 let _ = writeln!(output, "{} - {} {}руб/шт", idx + 1, p.size, p.price);
                 output
             },
         )
-    }
-
-    pub fn ready_prompt(&self) -> String {
-        READY.to_owned()
     }
 
     pub fn final_prompt(&self, order_id: String) -> String {

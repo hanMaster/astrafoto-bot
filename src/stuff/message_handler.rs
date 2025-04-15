@@ -66,7 +66,10 @@ where
                 OrderState::FilesReceiving { .. } => {
                     let received = message.message.to_lowercase();
 
-                    if (received.contains("все") || received.contains("всё")) && order.have_files()
+                    if (received.contains("все")
+                        || received.contains("всё")
+                        || received.contains("готов"))
+                        && order.have_files()
                     {
                         self.send_paper_request(chat_id).await;
                         self.paper_requested(order)?;
@@ -172,11 +175,7 @@ where
     async fn send_files_done(&self, chat_id: String) {
         let res = self
             .transport
-            .send_message(
-                chat_id,
-                r#"Загрузите файлы для печати. Когда закончите с отправкой файлов, напишите: все"#
-                    .to_string(),
-            )
+            .send_message(chat_id, config().FILES_DONE_PROMPT.to_string())
             .await;
         if let Err(e) = res {
             error!("Error sending files_done: {}", e);
@@ -200,16 +199,6 @@ where
             .await;
         if let Err(e) = res {
             error!("Error sending size request: {}", e);
-        };
-    }
-
-    async fn send_ready_request(&self, chat_id: String) {
-        let res = self
-            .transport
-            .send_message(chat_id, self.prompt.ready_prompt())
-            .await;
-        if let Err(e) = res {
-            error!("Error sending ready request: {}", e);
         };
     }
 
@@ -328,14 +317,7 @@ where
                                 .await;
                                 self.send_size_request(o.get_chat_id(), o.get_paper()).await;
                             }
-                            OrderState::SizeSelected { .. } => {
-                                self.send_receive_file_confirmation(
-                                    o.get_chat_id(),
-                                    o.files_count(),
-                                )
-                                .await;
-                                self.send_ready_request(o.get_chat_id()).await;
-                            }
+                            OrderState::SizeSelected { .. } => {}
                         }
                     } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() <= config().REPEAT_TIMEOUT

@@ -91,18 +91,24 @@ where
                 }
 
                 OrderState::SizeRequested { .. } => {
-                    // let files_count = order.files_count();
                     let res = self.try_set_size(order, message);
                     match res {
-                        Ok(_) => {
-                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                            //     .await;
-                            self.send_ready_request(chat_id.clone()).await;
+                        Ok(order) => {
+                            self.send_wait_request(chat_id.clone()).await;
+                            let res = self.transport.send_order(order).await;
+                            self.repository.delete_order(&chat_id)?;
+                            match res {
+                                Ok(order_id) => {
+                                    info!("Order from {} DONE with id {}", chat_id, order_id);
+                                    self.send_final_request(chat_id, order_id).await;
+                                }
+                                Err(_) => {
+                                    self.send_error_request(chat_id).await;
+                                }
+                            }
                         }
                         Err(Error::SizeInvalid(paper)) => {
                             error!("Paper size invalid: {:?}", paper);
-                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                            //     .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         _ => {}
@@ -110,22 +116,23 @@ where
                 }
 
                 OrderState::SizeSelected { .. } => {
-                    if message.message.to_lowercase().contains("готов") && order.have_files() {
-                        self.send_wait_request(chat_id.clone()).await;
-                        let res = self.transport.send_order(order).await;
-                        self.repository.delete_order(&chat_id)?;
-                        match res {
-                            Ok(order_id) => {
-                                info!("Order from {} DONE with id {}", chat_id, order_id);
-                                self.send_final_request(chat_id, order_id).await;
-                            }
-                            Err(_) => {
-                                self.send_error_request(chat_id).await;
-                            }
-                        }
-                    } else {
-                        self.send_ready_request(chat_id).await;
-                    }
+                    unreachable!()
+                    // if message.message.to_lowercase().contains("готов") && order.have_files() {
+                    //     self.send_wait_request(chat_id.clone()).await;
+                    //     let res = self.transport.send_order(order).await;
+                    //     self.repository.delete_order(&chat_id)?;
+                    //     match res {
+                    //         Ok(order_id) => {
+                    //             info!("Order from {} DONE with id {}", chat_id, order_id);
+                    //             self.send_final_request(chat_id, order_id).await;
+                    //         }
+                    //         Err(_) => {
+                    //             self.send_error_request(chat_id).await;
+                    //         }
+                    //     }
+                    // } else {
+                    //     self.send_ready_request(chat_id).await;
+                    // }
                 }
             }
             info!("Order updated\n{:#?}", self.repository);
@@ -157,7 +164,7 @@ where
         }
     }
 
-    fn try_set_size(&mut self, o: OrderState, message: ReceivedMessage) -> Result<()> {
+    fn try_set_size(&mut self, o: OrderState, message: ReceivedMessage) -> Result<OrderState> {
         let size_type: usize = message.message.parse()?;
         let paper = o.get_paper().to_string();
         let size_opt = self.prompt.try_get_size(o.get_paper(), size_type - 1);
@@ -166,8 +173,8 @@ where
             None => Err(Error::SizeInvalid(paper)),
             Some((size, price)) => {
                 let new_state = o.into_order_with_size(size, price)?;
-                self.repository.set_order(new_state);
-                Ok(())
+                self.repository.set_order(new_state.clone());
+                Ok(new_state)
             }
         }
     }

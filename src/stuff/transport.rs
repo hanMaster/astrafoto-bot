@@ -92,7 +92,7 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn log_to_admin(&self, msg: String) {
+    async fn email_state_to_admin(&self, msg: String) {
         println!("Sending message to admin: {}", &msg);
     }
 

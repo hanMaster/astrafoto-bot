@@ -94,6 +94,7 @@ where
                     let res = self.try_set_size(order, message);
                     match res {
                         Ok(order) => {
+                            info!("Order ready for send to print\n{:#?}", order);
                             self.send_wait_request(chat_id.clone()).await;
                             let res = self.transport.send_order(order).await;
                             self.repository.delete_order(&chat_id)?;

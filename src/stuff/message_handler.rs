@@ -129,7 +129,7 @@ where
         } else {
             self.repository.set_order(OrderState::from_txt_msg(message));
             info!("Order created\n{:#?}", self.repository);
-            self.send_paper_request(chat_id).await;
+            self.send_files_done(chat_id).await;
         }
         Ok(())
     }

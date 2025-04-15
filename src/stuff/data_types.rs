@@ -271,6 +271,12 @@ impl OrderState {
             OrderState::SizeSelected { .. } => {}
         }
     }
+
+    pub fn set_first_prompt_has_been_requested(&mut self) {
+        if let OrderState::FilesReceiving { first_prompt_sent, .. } = self {
+            *first_prompt_sent = true
+        }
+    }
 }
 
 impl Display for OrderState {

@@ -295,6 +295,9 @@ where
                             .await;
                         if !first_prompt_sent {
                             self.send_files_done(o.get_chat_id()).await;
+                            let mut clonned = o.clone();
+                            clonned.set_first_prompt_has_been_requested();
+                            self.repository.set_order(clonned);
                         }
                     }
                     if o.repeats() < config().REPEAT_COUNT

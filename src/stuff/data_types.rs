@@ -49,7 +49,7 @@ pub struct ReceivedMessage {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum OrderState {
-    NewOrder {
+    FilesReceiving {
         chat_id: String,
         customer_name: String,
         files: Vec<String>,
@@ -88,7 +88,7 @@ pub enum OrderState {
 
 impl OrderState {
     pub fn from_img_msg(msg: ReceivedMessage) -> OrderState {
-        OrderState::NewOrder {
+        OrderState::FilesReceiving {
             chat_id: msg.chat_id,
             customer_name: msg.customer_name,
             files: vec![msg.message],
@@ -110,7 +110,7 @@ impl OrderState {
 
     pub fn get_chat_id(&self) -> String {
         match self {
-            OrderState::NewOrder { chat_id, .. } => chat_id.clone(),
+            OrderState::FilesReceiving { chat_id, .. } => chat_id.clone(),
             OrderState::RaperRequested { chat_id, .. } => chat_id.to_string(),
             OrderState::SizeRequested { chat_id, .. } => chat_id.to_string(),
             OrderState::SizeSelected { chat_id, .. } => chat_id.to_string(),
@@ -119,7 +119,7 @@ impl OrderState {
 
     pub fn get_paper(&self) -> &str {
         match self {
-            OrderState::NewOrder { .. } => "",
+            OrderState::FilesReceiving { .. } => "",
             OrderState::RaperRequested { .. } => "",
             OrderState::SizeRequested { paper, .. } => paper,
             OrderState::SizeSelected { .. } => "",
@@ -128,7 +128,7 @@ impl OrderState {
 
     pub fn last_time_sec(&self) -> u64 {
         match self {
-            OrderState::NewOrder { last_msg_time, .. } => last_msg_time.elapsed(),
+            OrderState::FilesReceiving { last_msg_time, .. } => last_msg_time.elapsed(),
             OrderState::RaperRequested { last_msg_time, .. } => last_msg_time.elapsed(),
             OrderState::SizeRequested { last_msg_time, .. } => last_msg_time.elapsed(),
             OrderState::SizeSelected { last_msg_time, .. } => last_msg_time.elapsed(),
@@ -137,7 +137,7 @@ impl OrderState {
 
     pub fn repeats(&self) -> i32 {
         match self {
-            OrderState::NewOrder { .. } => 0,
+            OrderState::FilesReceiving { .. } => 0,
             OrderState::RaperRequested { repeats, .. } => *repeats,
             OrderState::SizeRequested { repeats, .. } => *repeats,
             OrderState::SizeSelected { repeats, .. } => *repeats,
@@ -146,7 +146,7 @@ impl OrderState {
 
     pub fn add_image(&mut self, url: String) {
         match self {
-            OrderState::NewOrder {
+            OrderState::FilesReceiving {
                 files,
                 last_msg_time,
                 ..
@@ -183,7 +183,7 @@ impl OrderState {
 
     pub fn have_files(&self) -> bool {
         match self {
-            OrderState::NewOrder { files, .. } => !files.is_empty(),
+            OrderState::FilesReceiving { files, .. } => !files.is_empty(),
             OrderState::RaperRequested { files, .. } => !files.is_empty(),
             OrderState::SizeRequested { files, .. } => !files.is_empty(),
             OrderState::SizeSelected { files, .. } => !files.is_empty(),
@@ -192,7 +192,7 @@ impl OrderState {
 
     pub fn files_count(&self) -> usize {
         match self {
-            OrderState::NewOrder { files, .. } => files.len(),
+            OrderState::FilesReceiving { files, .. } => files.len(),
             OrderState::RaperRequested { files, .. } => files.len(),
             OrderState::SizeRequested { files, .. } => files.len(),
             OrderState::SizeSelected { files, .. } => files.len(),
@@ -201,7 +201,7 @@ impl OrderState {
 
     pub fn into_order_with_paper_requested(self) -> Result<OrderState> {
         match self {
-            OrderState::NewOrder {
+            OrderState::FilesReceiving {
                 chat_id,
                 customer_name,
                 files,
@@ -240,13 +240,13 @@ impl OrderState {
             }),
             OrderState::SizeRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeSelected { .. } => Err(Error::OrderWrongState),
-            OrderState::NewOrder { .. } => Err(Error::OrderWrongState),
+            OrderState::FilesReceiving { .. } => Err(Error::OrderWrongState),
         }
     }
 
     pub fn into_order_with_size(self, size: String, price: i32) -> Result<OrderState> {
         match self {
-            OrderState::NewOrder { .. } => Err(Error::OrderWrongState),
+            OrderState::FilesReceiving { .. } => Err(Error::OrderWrongState),
             OrderState::RaperRequested { .. } => Err(Error::OrderWrongState),
             OrderState::SizeRequested {
                 chat_id,
@@ -272,7 +272,7 @@ impl OrderState {
 
     pub fn requested(&mut self) {
         match self {
-            OrderState::NewOrder { .. } => {}
+            OrderState::FilesReceiving { .. } => {}
             OrderState::RaperRequested {
                 repeats,
                 last_msg_time,
@@ -304,7 +304,7 @@ impl OrderState {
 impl Display for OrderState {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            OrderState::NewOrder { .. } => {
+            OrderState::FilesReceiving { .. } => {
                 unimplemented!()
             }
             OrderState::RaperRequested { .. } => {
@@ -345,7 +345,7 @@ pub struct OrderMessage {
 impl From<OrderState> for OrderMessage {
     fn from(order: OrderState) -> Self {
         match order {
-            OrderState::NewOrder { .. } => {
+            OrderState::FilesReceiving { .. } => {
                 unreachable!()
             }
             OrderState::RaperRequested { .. } => {

@@ -63,10 +63,13 @@ where
             }
 
             match order {
-                OrderState::NewOrder { .. } => {
-                    self.send_receive_file_confirmation(chat_id.clone(), order.files_count()).await;
-                    self.paper_requested(order)?;
-                    self.send_paper_request(chat_id).await;
+                OrderState::FilesReceiving { .. } => {
+                    if message.message.to_lowercase().contains("все") && order.have_files() {
+                        self.send_receive_file_confirmation(chat_id.clone(), order.files_count())
+                            .await;
+                        self.paper_requested(order)?;
+                        self.send_paper_request(chat_id).await;
+                    }
                 }
 
                 OrderState::RaperRequested { .. } => {
@@ -74,7 +77,8 @@ where
                     let res = self.try_set_paper(order, message);
                     match res {
                         Ok(paper) => {
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count).await;
+                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                                .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         Err(_) => {
@@ -88,12 +92,14 @@ where
                     let res = self.try_set_size(order, message);
                     match res {
                         Ok(_) => {
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count).await;
+                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                                .await;
                             self.send_ready_request(chat_id.clone()).await;
                         }
                         Err(Error::SizeInvalid(paper)) => {
                             error!("Paper size invalid: {:?}", paper);
-                            self.send_receive_file_confirmation(chat_id.clone(), files_count).await;
+                            self.send_receive_file_confirmation(chat_id.clone(), files_count)
+                                .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         _ => {}
@@ -169,7 +175,20 @@ where
             .send_message(chat_id, format!("От Вас получено файлов: {}", count))
             .await;
         if let Err(e) = res {
-            error!("Error sending paper request: {}", e);
+            error!("Error sending receive_file_confirmation: {}", e);
+        };
+    }
+
+    async fn send_files_done(&self, chat_id: String) {
+        let res = self
+            .transport
+            .send_message(
+                chat_id,
+                r#"Когда закончите с отправкой файлов, напишите: все"#.to_string(),
+            )
+            .await;
+        if let Err(e) = res {
+            error!("Error sending files_done: {}", e);
         };
     }
 
@@ -179,7 +198,7 @@ where
             .send_message(chat_id, self.prompt.paper_prompt())
             .await;
         if let Err(e) = res {
-            error!("Error sending paper request: {}", e);
+            error!("Error sending paper_request: {}", e);
         };
     }
 
@@ -212,7 +231,7 @@ where
             )
             .await;
         if let Err(e) = res {
-            error!("Error sending final request: {}", e);
+            error!("Error sending wait_request: {}", e);
         };
     }
 
@@ -235,7 +254,7 @@ where
             )
             .await;
         if let Err(e) = res {
-            error!("Error sending final request: {}", e);
+            error!("Error sending error_request: {}", e);
         };
     }
 
@@ -245,7 +264,7 @@ where
             .send_message(chat_id, "Ваш заказ отменен".to_string())
             .await;
         if let Err(e) = res {
-            error!("Error sending final request: {}", e);
+            error!("Error sending cancel request: {}", e);
         };
     }
 }
@@ -277,12 +296,12 @@ where
         for (_, o) in orders {
             match o.have_files() {
                 true => {
-                    if let OrderState::NewOrder {..} = o {
-                        if o.last_time_sec() > 5 {
-                            self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
-                        }
+                    if let OrderState::FilesReceiving { .. } = o {
+                        self.send_receive_file_confirmation(o.get_chat_id(), o.files_count())
+                            .await;
+                        self.send_files_done(o.get_chat_id()).await;
                     }
-                    else if o.repeats() < config().REPEAT_COUNT
+                    if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
                         info!("send requests\n{:?}", o);
@@ -291,21 +310,31 @@ where
                         clonned.requested();
                         self.repository.set_order(clonned);
                         match o {
-                            OrderState::NewOrder { .. } => {
-                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
-                                self.send_paper_request(o.get_chat_id()).await;
-                                self.paper_requested(o)?;
+                            OrderState::FilesReceiving { .. } => {
+                                unreachable!()
                             }
                             OrderState::RaperRequested { .. } => {
-                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
+                                self.send_receive_file_confirmation(
+                                    o.get_chat_id(),
+                                    o.files_count(),
+                                )
+                                .await;
                                 self.send_paper_request(o.get_chat_id()).await;
                             }
                             OrderState::SizeRequested { .. } => {
-                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
+                                self.send_receive_file_confirmation(
+                                    o.get_chat_id(),
+                                    o.files_count(),
+                                )
+                                .await;
                                 self.send_size_request(o.get_chat_id(), o.get_paper()).await;
                             }
                             OrderState::SizeSelected { .. } => {
-                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
+                                self.send_receive_file_confirmation(
+                                    o.get_chat_id(),
+                                    o.files_count(),
+                                )
+                                .await;
                                 self.send_ready_request(o.get_chat_id()).await;
                             }
                         }

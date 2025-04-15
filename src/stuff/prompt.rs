@@ -34,7 +34,7 @@ impl Prompt {
 
     pub fn paper_prompt(&self) -> String {
         self.paper.paper_vec().iter().enumerate().fold(
-            "Выберите тип бумаги\nУкажите цифру варианта:\n".to_string(),
+            "Выберите тип бумаги\nУкажите цифру варианта:\n\n".to_string(),
             |mut output, (idx, b)| {
                 let _ = writeln!(output, "{} - {}", idx + 1, b);
                 output
@@ -45,7 +45,7 @@ impl Prompt {
     pub fn size_prompt(&self, paper: &str) -> String {
         let sizes = self.paper.sizes_by_paper(paper);
         sizes.iter().enumerate().fold(
-            "Выберите размер фотографий\nУкажите цифру варианта:\n".to_string(),
+            "Выберите размер фотографий\nУкажите цифру варианта:\n\n".to_string(),
             |mut output, (idx, p)| {
                 let _ = writeln!(output, "{} - {} {}руб/шт", idx + 1, p.size, p.price);
                 output

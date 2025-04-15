@@ -54,6 +54,7 @@ pub enum OrderState {
         customer_name: String,
         files: Vec<String>,
         last_msg_time: Timestamp,
+        first_prompt_sent: bool,
     },
     RaperRequested {
         chat_id: String,
@@ -87,6 +88,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![msg.message],
             last_msg_time: Timestamp::now(),
+            first_prompt_sent: false,
         }
     }
 
@@ -96,6 +98,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![],
             last_msg_time: Timestamp::now(),
+            first_prompt_sent: false,
         }
     }
 

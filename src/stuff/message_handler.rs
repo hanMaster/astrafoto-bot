@@ -287,9 +287,15 @@ where
         for (_, o) in orders {
             match o.have_files() {
                 true => {
-                    if let OrderState::FilesReceiving { .. } = o {
+                    if let OrderState::FilesReceiving {
+                        first_prompt_sent, ..
+                    } = o
+                    {
                         self.send_receive_file_confirmation(o.get_chat_id(), o.files_count())
                             .await;
+                        if !first_prompt_sent {
+                            self.send_files_done(o.get_chat_id()).await;
+                        }
                     }
                     if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT

@@ -68,20 +68,15 @@ where
 
                     if (received.contains("все") || received.contains("всё")) && order.have_files()
                     {
-                        // self.send_receive_file_confirmation(chat_id.clone(), order.files_count())
-                        //     .await;
                         self.send_paper_request(chat_id).await;
                         self.paper_requested(order)?;
                     }
                 }
 
                 OrderState::RaperRequested { .. } => {
-                    // let files_count = order.files_count();
                     let res = self.try_set_paper(order, message);
                     match res {
                         Ok(paper) => {
-                            // self.send_receive_file_confirmation(chat_id.clone(), files_count)
-                            //     .await;
                             self.send_size_request(chat_id.clone(), &paper).await;
                         }
                         Err(_) => {
@@ -94,7 +89,7 @@ where
                     let res = self.try_set_size(order, message);
                     match res {
                         Ok(order) => {
-                            info!("Order ready for send to print\n{:#?}", order);
+                            info!("Order ready for sending to print\n{:#?}", order);
                             self.send_wait_request(chat_id.clone()).await;
                             let res = self.transport.send_order(order).await;
                             self.repository.delete_order(&chat_id)?;
@@ -118,22 +113,6 @@ where
 
                 OrderState::SizeSelected { .. } => {
                     unreachable!()
-                    // if message.message.to_lowercase().contains("готов") && order.have_files() {
-                    //     self.send_wait_request(chat_id.clone()).await;
-                    //     let res = self.transport.send_order(order).await;
-                    //     self.repository.delete_order(&chat_id)?;
-                    //     match res {
-                    //         Ok(order_id) => {
-                    //             info!("Order from {} DONE with id {}", chat_id, order_id);
-                    //             self.send_final_request(chat_id, order_id).await;
-                    //         }
-                    //         Err(_) => {
-                    //             self.send_error_request(chat_id).await;
-                    //         }
-                    //     }
-                    // } else {
-                    //     self.send_ready_request(chat_id).await;
-                    // }
                 }
             }
             info!("Order updated\n{:#?}", self.repository);

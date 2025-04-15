@@ -68,10 +68,10 @@ where
 
                     if (received.contains("все") || received.contains("всё")) && order.have_files()
                     {
-                        self.send_receive_file_confirmation(chat_id.clone(), order.files_count())
-                            .await;
-                        self.paper_requested(order)?;
+                        // self.send_receive_file_confirmation(chat_id.clone(), order.files_count())
+                        //     .await;
                         self.send_paper_request(chat_id).await;
+                        self.paper_requested(order)?;
                     }
                 }
 
@@ -303,7 +303,6 @@ where
                     if let OrderState::FilesReceiving { .. } = o {
                         self.send_receive_file_confirmation(o.get_chat_id(), o.files_count())
                             .await;
-                        self.send_files_done(o.get_chat_id()).await;
                     }
                     if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
@@ -315,7 +314,7 @@ where
                         self.repository.set_order(clonned);
                         match o {
                             OrderState::FilesReceiving { .. } => {
-                                unreachable!()
+                                self.send_files_done(o.get_chat_id()).await;
                             }
                             OrderState::RaperRequested { .. } => {
                                 self.send_receive_file_confirmation(

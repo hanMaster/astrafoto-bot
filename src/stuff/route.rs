@@ -8,6 +8,7 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::{middleware, Json, Router};
+use log::info;
 use tokio::sync::mpsc::Sender;
 
 pub fn get_router(state: Sender<Message>) -> Router {
@@ -21,6 +22,7 @@ async fn handle_root(
     State(tx): State<Sender<Message>>,
     Json(m): Json<HookRoot>,
 ) -> impl IntoResponse {
+    info!("Received hook root message: {:?}", m);
     let res = tx.send(m.into()).await;
     if let Err(e) = res {
         println!("Failed to send message {e}",);

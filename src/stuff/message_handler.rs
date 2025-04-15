@@ -271,14 +271,7 @@ where
         for (_, o) in orders {
             match o.have_files() {
                 true => {
-                    if let OrderState::NewOrder { .. } = o {
-                        info!("New order last_time_sec {:?}", o.last_time_sec());
-                        if o.last_time_sec() > 3 {
-                            self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
-                            self.send_paper_request(o.get_chat_id()).await;
-                            self.paper_requested(o)?;
-                        }
-                    } else if o.repeats() < config().REPEAT_COUNT
+                    if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
                         info!("send requests\n{:?}", o);
@@ -288,15 +281,20 @@ where
                         self.repository.set_order(clonned);
                         match o {
                             OrderState::NewOrder { .. } => {
-                                unreachable!()
+                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
+                                self.send_paper_request(o.get_chat_id()).await;
+                                self.paper_requested(o)?;
                             }
                             OrderState::RaperRequested { .. } => {
+                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
                                 self.send_paper_request(o.get_chat_id()).await;
                             }
                             OrderState::SizeRequested { .. } => {
+                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
                                 self.send_size_request(o.get_chat_id(), o.get_paper()).await;
                             }
                             OrderState::SizeSelected { .. } => {
+                                self.send_receive_file_confirmation(o.get_chat_id(), o.files_count()).await;
                                 self.send_ready_request(o.get_chat_id()).await;
                             }
                         }

@@ -8,17 +8,15 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::{middleware, Json, Router};
-use log::info;
 use tokio::sync::mpsc::Sender;
 
-pub fn get_router(tx: Sender<Message>) -> Router {
+pub fn get_router(state: Sender<Message>) -> Router {
     Router::new()
         .route("/hook", post(handle_root))
         .route_layer(middleware::from_fn(auth_guard))
-        .with_state(tx)
+        .with_state(state)
 }
 
-#[axum::debug_handler]
 async fn handle_root(
     State(tx): State<Sender<Message>>,
     Json(m): Json<HookRoot>,
@@ -39,8 +37,6 @@ pub async fn auth_guard(headers: HeaderMap, req: Request<Body>, next: Next) -> i
     };
 
     let token = token.split_whitespace().skip(1).next().unwrap();
-    info!("Token: {token}");
-    info!("Secret: {}", config().SECRET_TOKEN);
 
     if token.ne(&config().SECRET_TOKEN) {
         return Err((StatusCode::UNAUTHORIZED, "Not authenticated!!!!").into_response());

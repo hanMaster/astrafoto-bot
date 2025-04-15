@@ -41,11 +41,11 @@ where
             let mut updated = order.clone();
             updated.add_image(message.message);
             self.repository.set_order(updated);
-            info!("Add image {:#?}", self.repository);
+            info!("Add image\n{:#?}", self.repository);
         } else {
             let new_order = OrderState::from_img_msg(message);
             self.repository.set_order(new_order);
-            info!("New order from image {:#?}", self.repository);
+            info!("New order from image\n{:#?}", self.repository);
         }
         Ok(())
     }
@@ -56,7 +56,7 @@ where
         if let Some(order) = order_option {
             // Клиент пожелал отменить заказ
             if message.message.to_lowercase().contains("отмен") {
-                info!("Order cancelled {:#?}", order);
+                info!("Order cancelled\n{:#?}", order);
                 self.repository.delete_order(&chat_id)?;
                 self.send_cancel(chat_id).await;
                 return Ok(());
@@ -113,10 +113,10 @@ where
                     }
                 }
             }
-            info!("Order updated {:#?}", self.repository);
+            info!("Order updated\n{:#?}", self.repository);
         } else {
             self.repository.set_order(OrderState::from_txt_msg(message));
-            info!("Order created {:#?}", self.repository);
+            info!("Order created\n{:#?}", self.repository);
             self.send_paper_request(chat_id).await;
         }
         Ok(())
@@ -281,7 +281,7 @@ where
                     } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() > config().REPEAT_TIMEOUT
                     {
-                        info!("send requests {:?}", o);
+                        info!("send requests\n{:?}", o);
 
                         let mut clonned = o.clone();
                         clonned.requested();
@@ -303,9 +303,9 @@ where
                     } else if o.repeats() < config().REPEAT_COUNT
                         && o.last_time_sec() <= config().REPEAT_TIMEOUT
                     {
-                        info!("Just wait {:?}", o);
+                        info!("Just wait\n{:?}", o);
                     } else {
-                        info!("orders_to_remove {:?}", o);
+                        info!("orders_to_remove\n{:?}", o);
                         orders_to_remove.push(o.get_chat_id());
                     }
                 }

@@ -98,7 +98,7 @@ impl OrderState {
             customer_name: msg.customer_name,
             files: vec![],
             last_msg_time: Timestamp::now(),
-            first_prompt_sent: false,
+            first_prompt_sent: true,
         }
     }
 

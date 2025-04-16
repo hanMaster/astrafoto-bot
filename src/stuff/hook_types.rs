@@ -1,12 +1,12 @@
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct TextMessageData {
     #[serde(rename = "textMessage")]
     pub text_message: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct FileMessageData {
     #[serde(rename = "downloadUrl")]
     pub download_url: String,
@@ -25,7 +25,7 @@ pub struct FileMessageData {
     // pub is_forwarded: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct MessageData {
     #[serde(rename = "typeMessage")]
     pub type_message: String,
@@ -35,7 +35,7 @@ pub struct MessageData {
     pub file_message_data: Option<FileMessageData>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SenderData {
     #[serde(rename = "chatId")]
     pub chat_id: String,
@@ -57,7 +57,7 @@ pub struct SenderData {
 //     pub type_instance: String,
 // }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct HookRoot {
     #[serde(rename = "typeWebhook")]
     pub type_webhook: String,

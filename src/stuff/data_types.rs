@@ -33,7 +33,7 @@ impl From<HookRoot> for Message {
                 }
             }
 
-            "statusInstanceChanged" => Message::StateInstance(m.status_instance.unwrap()),
+            "stateInstanceChanged" => Message::StateInstance(m.state_instance.unwrap()),
 
             _ => Message::Empty,
         }

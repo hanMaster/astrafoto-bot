@@ -70,6 +70,6 @@ pub struct HookRoot {
     pub sender_data: Option<SenderData>,
     #[serde(rename = "messageData")]
     pub message_data: Option<MessageData>,
-    #[serde(rename = "statusInstance")]
-    pub status_instance: Option<String>,
+    #[serde(rename = "stateInstance")]
+    pub state_instance: Option<String>,
 }

@@ -6,6 +6,7 @@ use log::{error, info};
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::net::TcpListener;
+use tokio::signal;
 
 pub struct Poller<H: MessageHandler + Clone + Send + Sync + 'static> {
     handler: H,
@@ -30,7 +31,9 @@ where
             let app = get_router(tx.clone());
 
             info!("Hook server started on port {}", port);
-            axum::serve(listener, app).await.expect("Axum server error");
+            axum::serve(listener, app)
+                .with_graceful_shutdown(shutdown_signal())
+                .await.expect("Axum server error");
         });
 
         let mut clonned = self.handler.clone();
@@ -52,10 +55,37 @@ where
                 }
                 None => {
                     info!("Channel closed, shutting down");
+                    return Ok(())
                 }
             }
         }
     }
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => info!("Received SIGINT."),
+        _ = terminate => info!("Received SIGTERM."),
+    }
+
+    info!("signal received, starting graceful shutdown");
 }
 
 #[cfg(test)]
